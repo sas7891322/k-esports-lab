@@ -1,5 +1,5 @@
 (function () {
-  const STORAGE_KEY = "kel_matches_v1";
+  const STORAGE_KEY = "kel_matches_v12";
 
   function getMatches() {
     try {
@@ -28,7 +28,7 @@
   }
 
   function todayISO() {
-    // MVP 使用瀏覽器本地時區，正式上線建議由伺服器以 Asia/Taipei 統一。
+    // 目前使用瀏覽器本地時區；正式後端上線後統一以 Asia/Taipei 處理。
     const d = new Date();
     const y = d.getFullYear();
     const m = String(d.getMonth() + 1).padStart(2, "0");
@@ -49,7 +49,7 @@
       <article class="card match-card ${m.premium ? "premium" : ""}">
         <div class="match-meta">
           <span class="pill">${escapeHtml(m.league)}</span>
-          <span>${fmtDate(m.date)}</span><span>${escapeHtml(m.time)}</span><span>${escapeHtml(m.bo)}</span>
+          <span>${fmtDate(m.date)}</span><span>${escapeHtml(m.time)}</span><span>${escapeHtml(m.bo)}</span>${m.week ? `<span>${escapeHtml(m.week)}</span>` : ""}
           ${premiumPill(m)}
         </div>
         <div class="teams">
@@ -78,7 +78,7 @@
     if (!todayEl) return;
     const matches = getMatches();
     let today = matches.filter(m => m.date === todayISO() && m.status !== "finished");
-    // 讓靜態示範在非 2026/08/12 開啟時仍有內容。
+    // v1.2 首批正式內容為 2026/08/12，非當日開啟仍保留首批文章供檢視。
     if (!today.length) today = matches.filter(m => m.date === "2026-08-12" && m.status !== "finished");
     todayEl.innerHTML = today.length ? today.map(matchCard).join("") : '<div class="empty">今日尚無已發布賽事。</div>';
 
@@ -139,7 +139,7 @@
     const locked = m.premium;
     root.innerHTML = `
       <div class="page-head">
-        <div class="match-meta"><span class="pill">${escapeHtml(m.league)}</span><span>${fmtDate(m.date)}</span><span>${escapeHtml(m.time)}</span><span>${escapeHtml(m.bo)}</span>${premiumPill(m)}</div>
+        <div class="match-meta"><span class="pill">${escapeHtml(m.league)}</span><span>${fmtDate(m.date)}</span><span>${escapeHtml(m.time)}</span><span>${escapeHtml(m.bo)}</span>${m.week ? `<span>${escapeHtml(m.week)}</span>` : ""}${premiumPill(m)}</div>
       </div>
       <div class="card match-card ${m.premium ? "premium" : ""}" style="margin-bottom:18px">
         <div class="teams">
@@ -187,12 +187,12 @@
         <span>近期狀態與深度數據</span><span>關鍵選手／路線對位</span><span>版本與 BP 分析</span><span>勝負條件與本場變數</span><span>盤口二次核實</span><span>主推薦、次推薦與最終結論</span>
       </div>
       <button class="btn btn-gold unlock-btn" data-price="${m.price || 39}">NT$${m.price || 39} 解鎖本場完整分析</button>
-      <p style="margin-bottom:0">目前 MVP 尚未串接正式金流。</p>
+      <p style="margin-bottom:0">正式金流尚在審核／串接階段，目前不會產生任何收款。</p>
     </section>`;
   }
 
   function bindUnlockButtons() {
-    document.querySelectorAll(".unlock-btn").forEach(btn => btn.addEventListener("click", () => openModal("K Premium 付費功能建置中", `網站流程已預留單場 NT$${btn.dataset.price || 39} 解鎖。待綠界／TapPay 審核方向確認後，再接正式付款與訂單解鎖。`)));
+    document.querySelectorAll(".unlock-btn").forEach(btn => btn.addEventListener("click", () => openModal("K Premium 尚未開放收款", `單場 NT$${btn.dataset.price || 39} 解鎖流程已完成前台設計。待金流審核與正式訂單系統完成後才會開放付款。`)));
   }
 
   function openModal(title, text) {
