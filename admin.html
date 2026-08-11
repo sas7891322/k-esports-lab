@@ -1,0 +1,23 @@
+<!doctype html><html lang="zh-Hant"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>基本後台｜K Esports Lab</title><link rel="icon" href="assets/img/k-logo.svg"><link rel="stylesheet" href="assets/css/styles.css"></head><body>
+<header class="topbar"><div class="shell topbar-inner"><a class="brand" href="index.html"><img src="assets/img/k-logo.svg" alt=""><span>K ESPORTS LAB<small>MVP 基本後台</small></span></a><nav class="nav"><a href="index.html">前台</a><a class="active" href="admin.html">後台</a></nav><button id="menuBtn" class="menu-btn">☰</button></div><div id="mobileMenu" class="mobile-menu shell"><a href="index.html">返回前台</a></div></header>
+<main class="shell admin-wrap"><aside class="card admin-side"><h3>MVP 後台</h3><p style="color:var(--muted);font-size:13px;line-height:1.6">第一版資料儲存在目前瀏覽器 LocalStorage，適合驗證流程；正式上線需改成登入＋伺服器資料庫。</p><button id="resetForm" class="btn btn-secondary">＋ 新增賽事</button><button id="resetDemo" class="btn btn-danger">重置示範資料</button></aside><div class="admin-main">
+<section class="card form-card"><h2 id="formTitle">新增賽事</h2><form id="matchForm"><div class="form-grid">
+<div class="form-field"><label>賽區</label><select id="fLeague" class="select"><option>LCK</option><option>LPL</option><option>LCP</option><option>LEC</option><option>LCS</option><option>CBLOL</option></select></div><div class="form-field"><label>狀態</label><select id="fStatus" class="select"><option value="upcoming">未開始</option><option value="live">進行中</option><option value="finished">已結束</option></select></div>
+<div class="form-field"><label>日期</label><input id="fDate" type="date" class="input" required></div><div class="form-field"><label>時間</label><input id="fTime" type="time" class="input"></div>
+<div class="form-field"><label>賽制</label><select id="fBo" class="select"><option>BO3</option><option>BO5</option><option>BO1</option></select></div><div class="form-field"><label>解鎖價格</label><input id="fPrice" type="number" class="input" value="39" min="0"></div>
+<div class="form-field"><label>A 隊名稱</label><input id="fTeamA" class="input" required></div><div class="form-field"><label>A 隊縮寫</label><input id="fTeamAShort" class="input" maxlength="8"></div>
+<div class="form-field"><label>B 隊名稱</label><input id="fTeamB" class="input" required></div><div class="form-field"><label>B 隊縮寫</label><input id="fTeamBShort" class="input" maxlength="8"></div>
+<div class="form-field full"><label class="checkline"><input id="fPremium" type="checkbox"> 設為 K Premium 精選場</label></div>
+<div class="form-field full"><label>卡片簡述</label><textarea id="fSummary" class="textarea"></textarea></div><div class="form-field full"><label>免費預覽／賽前總覽</label><textarea id="fPreview" class="textarea"></textarea></div>
+<div class="form-field full"><label>近期狀態</label><textarea id="fRecent" class="textarea"></textarea></div><div class="form-field full"><label>關鍵對位</label><textarea id="fMatchup" class="textarea"></textarea></div>
+<div class="form-field full"><label>版本與 BP</label><textarea id="fBp" class="textarea"></textarea></div><div class="form-field full"><label>雙方勝負條件</label><textarea id="fConditions" class="textarea"></textarea></div>
+<div class="form-field full"><label>本場變數</label><textarea id="fVariance" class="textarea"></textarea></div><div class="form-field full"><label>盤口二次核實</label><textarea id="fMarket" class="textarea"></textarea></div>
+<div class="form-field"><label>主推薦</label><input id="fPrimary" class="input"></div><div class="form-field"><label>次推薦</label><input id="fSecondary" class="input"></div>
+<div class="form-field"><label>預測比分</label><input id="fPrediction" class="input" placeholder="2:1"></div><div class="form-field"><label>完賽比分</label><input id="fResult" class="input" placeholder="2:1"></div>
+<div class="form-field full"><label>風險提醒</label><textarea id="fRisk" class="textarea"></textarea></div><div class="form-field full"><label class="checkline"><input id="fResultHit" type="checkbox"> 完賽後標記為比分預測命中</label></div>
+<div class="form-field full"><button class="btn btn-primary" type="submit">儲存賽事</button></div>
+</div></form></section>
+<section class="card form-card"><h2>賽事管理</h2><div id="adminList" class="admin-list"></div></section>
+</div></main>
+<div id="globalModal" class="modal"><div class="modal-card"><h3 data-modal-title></h3><p data-modal-text></p><div class="modal-actions"><button class="btn btn-secondary" data-modal-close>關閉</button></div></div></div>
+<script src="assets/js/data.js"></script><script src="assets/js/app.js"></script><script src="assets/js/admin.js"></script></body></html>
