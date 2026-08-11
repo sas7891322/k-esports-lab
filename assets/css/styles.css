@@ -188,6 +188,7 @@ h1 { margin: 8px 0 8px; font-size: clamp(30px, 5vw, 54px); line-height: 1.08; }
 .legal h1 { font-size: 32px; }
 .legal h2 { margin-top: 28px; font-size: 19px; }
 .legal p, .legal li { color: #b5c7d8; line-height: 1.8; }
+.legal-date { color: var(--muted) !important; font-size: 12px; margin-top: -2px; }
 
 .empty { padding: 30px; text-align: center; color: var(--muted); border: 1px dashed var(--line); border-radius: 16px; }
 
