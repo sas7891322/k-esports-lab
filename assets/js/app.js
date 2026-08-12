@@ -192,7 +192,7 @@
 
       <div class="analysis-layout">
         <main class="analysis-main">
-          ${analysisSection("賽事觀點", m.preview)}
+          ${m.status === "finished" && m.result ? analysisSection("最終賽果", m.result) : ""}\n          ${analysisSection("賽事觀點", m.preview)}
 
           ${locked ? premiumLock(m) : `
             ${analysisSection("推薦方向", m.recommendationPrimary)}

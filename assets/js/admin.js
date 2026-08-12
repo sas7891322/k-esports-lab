@@ -103,21 +103,88 @@
     if (fields) fields.hidden = !premium;
   }
 
+  function normalizeScore(value) {
+    return String(value || "").trim().replace(/[：﹕]/g, ":").replace(/\s+/g, "");
+  }
+
+  function predictionHit(prediction, aScore, bScore) {
+    const normalized = normalizeScore(prediction);
+    const match = normalized.match(/(\d+):(\d+)$/);
+    if (!match) return false;
+    return Number(match[1]) === Number(aScore) && Number(match[2]) === Number(bScore);
+  }
+
+  function renderResultManager(m) {
+    if (m.status === "finished") {
+      return `<div class="admin-result-finished">
+        <span class="result-badge">已完賽</span>
+        <strong>${window.KEL.escapeHtml(m.result || "-")}</strong>
+        ${m.resultHit ? '<span class="result-hit">✓ 比分命中</span>' : '<span class="result-miss">比分未命中</span>'}
+        <button class="btn btn-secondary btn-small" data-reopen="${m.id}">重新開啟</button>
+      </div>`;
+    }
+    return `<div class="admin-result-entry">
+      <div class="result-team-label">${window.KEL.escapeHtml(m.teamAShort)}</div>
+      <input class="input result-score-input" data-score-a="${m.id}" type="number" min="0" max="5" inputmode="numeric" placeholder="0">
+      <span class="result-colon">：</span>
+      <input class="input result-score-input" data-score-b="${m.id}" type="number" min="0" max="5" inputmode="numeric" placeholder="0">
+      <div class="result-team-label">${window.KEL.escapeHtml(m.teamBShort)}</div>
+      <button class="btn btn-primary btn-small" data-finish="${m.id}">確認完賽</button>
+    </div>`;
+  }
+
   function renderList() {
     const root = $("#adminList");
     const matches = adminMatches.slice().sort((a,b) => (b.date || "").localeCompare(a.date || ""));
     root.innerHTML = matches.map(m => `
-      <div class="admin-item">
-        <div><strong>${window.KEL.escapeHtml(m.league)}｜${window.KEL.escapeHtml(m.teamAShort)} vs ${window.KEL.escapeHtml(m.teamBShort)}</strong><small>${window.KEL.fmtDate(m.date)} ${window.KEL.escapeHtml(m.time)}｜${m.premium ? "K Premium" : "免費"}｜${window.KEL.escapeHtml(m.status)}</small></div>
+      <div class="admin-item admin-match-item">
+        <div class="admin-match-main">
+          <strong>${window.KEL.escapeHtml(m.league)}｜${window.KEL.escapeHtml(m.teamAShort)} vs ${window.KEL.escapeHtml(m.teamBShort)}</strong>
+          <small>${window.KEL.fmtDate(m.date)} ${window.KEL.escapeHtml(m.time)}｜${m.premium ? "K Premium" : "一般分析"}｜${m.status === "finished" ? "已結束" : "未完賽"}</small>
+        </div>
         <div class="admin-item-actions">
           <button class="btn btn-secondary" data-edit="${m.id}">編輯</button>
           <button class="btn btn-secondary" data-duplicate="${m.id}">複製</button>
           <button class="btn btn-danger" data-delete="${m.id}">刪除</button>
         </div>
+        <div class="admin-result-manager">${renderResultManager(m)}</div>
       </div>`).join("") || '<div class="empty">尚無賽事。</div>';
+
     root.querySelectorAll("[data-edit]").forEach(b => b.addEventListener("click", () => loadMatch(b.dataset.edit)));
     root.querySelectorAll("[data-duplicate]").forEach(b => b.addEventListener("click", () => duplicateMatch(b.dataset.duplicate)));
     root.querySelectorAll("[data-delete]").forEach(b => b.addEventListener("click", () => deleteMatch(b.dataset.delete)));
+    root.querySelectorAll("[data-finish]").forEach(b => b.addEventListener("click", () => finishMatch(b.dataset.finish)));
+    root.querySelectorAll("[data-reopen]").forEach(b => b.addEventListener("click", () => reopenMatch(b.dataset.reopen)));
+  }
+
+  async function finishMatch(id) {
+    const m = adminMatches.find(x => x.id === id);
+    if (!m) return;
+    const a = document.querySelector(`[data-score-a="${CSS.escape(id)}"]`);
+    const b = document.querySelector(`[data-score-b="${CSS.escape(id)}"]`);
+    const aScore = Number(a?.value), bScore = Number(b?.value);
+    if (!Number.isInteger(aScore) || !Number.isInteger(bScore) || aScore < 0 || bScore < 0) {
+      window.KEL.openModal("比分資料不足", "請先輸入雙方最終比分。"); return;
+    }
+    if (aScore === bScore) {
+      window.KEL.openModal("比分不正確", "系列賽最終比分不能平手。"); return;
+    }
+    const updated = {...m,
+      status:"finished",
+      result:`${m.teamAShort} ${aScore}：${bScore} ${m.teamBShort}`,
+      resultHit:predictionHit(m.prediction, aScore, bScore)
+    };
+    await api("/api/admin-matches", {method:"POST", body:JSON.stringify(updated)});
+    await loadAdminMatches();
+    window.KEL.openModal("已確認完賽", updated.resultHit ? `最終比分 ${updated.result}，預測比分完全命中。` : `最終比分 ${updated.result}，賽事已移入完賽紀錄。`);
+  }
+
+  async function reopenMatch(id) {
+    const m = adminMatches.find(x => x.id === id);
+    if (!m || !confirm("確定要把這場賽事恢復成未完賽嗎？")) return;
+    const updated = {...m, status:"upcoming", result:"", resultHit:false};
+    await api("/api/admin-matches", {method:"POST", body:JSON.stringify(updated)});
+    await loadAdminMatches();
   }
 
   function formData() {

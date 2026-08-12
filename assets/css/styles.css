@@ -572,3 +572,16 @@ h1 { margin: 8px 0 8px; font-size: clamp(30px, 5vw, 54px); line-height: 1.08; }
     width: 100%;
   }
 }
+
+/* v2.0.7 Result management */
+.admin-match-item{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:12px 16px;align-items:center}
+.admin-result-manager{grid-column:1/-1;padding-top:12px;border-top:1px solid rgba(255,255,255,.07)}
+.admin-result-entry{display:grid;grid-template-columns:auto 64px 18px 64px auto 1fr;gap:8px;align-items:center}
+.result-score-input{width:64px;text-align:center;padding-left:8px;padding-right:8px}
+.result-team-label{font-weight:900;color:#dce8f5}.result-colon{text-align:center;font-weight:900}
+.admin-result-entry .btn{justify-self:end}
+.admin-result-finished{display:flex;flex-wrap:wrap;align-items:center;gap:10px}
+.result-badge{border:1px solid rgba(104,224,168,.25);background:rgba(104,224,168,.08);color:#8ee0b5;border-radius:999px;padding:5px 9px;font-size:11px;font-weight:900}
+.result-hit{color:#8ee0b5;font-size:12px;font-weight:800}.result-miss{color:var(--muted);font-size:12px}
+.btn-small{padding:8px 11px;min-height:36px;font-size:12px}
+@media(max-width:720px){.admin-match-item{grid-template-columns:1fr}.admin-item-actions{justify-content:flex-start}.admin-result-entry{grid-template-columns:auto 54px 16px 54px auto}.admin-result-entry .btn{grid-column:1/-1;width:100%;justify-self:stretch}.result-score-input{width:54px}}
