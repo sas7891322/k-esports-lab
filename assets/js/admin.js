@@ -207,6 +207,7 @@
   }
 
   document.addEventListener("DOMContentLoaded", () => {
+    $("#adminTopLogout")?.addEventListener("click", logout);
     $("#adminLogout")?.addEventListener("click", logout);
     $("#matchForm")?.addEventListener("submit", save);
     $("#resetForm")?.addEventListener("click", resetForm);
