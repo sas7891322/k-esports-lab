@@ -6,6 +6,51 @@
   function val(id) { return $(id)?.value?.trim() || ""; }
   function checked(id) { return !!$(id)?.checked; }
 
+  function leagueTeams() {
+    const league = val("#fLeague") || "LCK";
+    return window.KEL_TEAMS?.[league] || {};
+  }
+
+  function fillTeamSelects(selectedA = "", selectedB = "") {
+    const teams = leagueTeams();
+    const options = Object.values(teams)
+      .map(t => `<option value="${window.KEL.escapeHtml(t.short)}">${window.KEL.escapeHtml(t.short)}｜${window.KEL.escapeHtml(t.name)}</option>`)
+      .join("");
+
+    ["#fTeamASelect", "#fTeamBSelect"].forEach(sel => {
+      const el = $(sel);
+      if (!el) return;
+      el.innerHTML = `<option value="">請選擇戰隊</option>${options}`;
+    });
+
+    if ($("#fTeamASelect")) $("#fTeamASelect").value = teams[selectedA] ? selectedA : "";
+    if ($("#fTeamBSelect")) $("#fTeamBSelect").value = teams[selectedB] ? selectedB : "";
+    renderTeamPreviews();
+  }
+
+  function selectedTeam(side) {
+    const short = val(side === "A" ? "#fTeamASelect" : "#fTeamBSelect");
+    return leagueTeams()[short] || null;
+  }
+
+  function renderTeamPreview(side) {
+    const root = $(side === "A" ? "#fTeamAPreview" : "#fTeamBPreview");
+    if (!root) return;
+    const team = selectedTeam(side);
+    if (!team) {
+      root.innerHTML = '<span class="admin-team-empty">尚未選擇</span>';
+      return;
+    }
+    root.innerHTML = `
+      <img src="${team.logo}" alt="${window.KEL.escapeHtml(team.name)}">
+      <span><strong>${window.KEL.escapeHtml(team.short)}</strong><small>${window.KEL.escapeHtml(team.name)}</small></span>`;
+  }
+
+  function renderTeamPreviews() {
+    renderTeamPreview("A");
+    renderTeamPreview("B");
+  }
+
   function renderList() {
     const root = $("#adminList");
     if (!root || !window.KEL) return;
@@ -27,8 +72,10 @@
 
   function formData() {
     const date = val("#fDate");
-    const teamAShort = val("#fTeamAShort") || val("#fTeamA").slice(0,3).toUpperCase();
-    const teamBShort = val("#fTeamBShort") || val("#fTeamB").slice(0,3).toUpperCase();
+    const teamA = selectedTeam("A");
+    const teamB = selectedTeam("B");
+    const teamAShort = teamA?.short || "";
+    const teamBShort = teamB?.short || "";
     const id = editId || `${slugify(val("#fLeague"))}-${slugify(teamAShort)}-${slugify(teamBShort)}-${date.replaceAll("-","")}-${Date.now().toString().slice(-5)}`;
     return {
       id,
@@ -36,8 +83,12 @@
       date,
       time: val("#fTime"),
       bo: val("#fBo") || "BO3",
-      teamA: val("#fTeamA"), teamAShort,
-      teamB: val("#fTeamB"), teamBShort,
+      teamA: teamA?.name || "",
+      teamAShort,
+      teamALogo: teamA?.logo || "",
+      teamB: teamB?.name || "",
+      teamBShort,
+      teamBLogo: teamB?.logo || "",
       status: val("#fStatus") || "upcoming",
       premium: checked("#fPremium"),
       price: Number(val("#fPrice") || 39),
@@ -52,23 +103,25 @@
   function save(e) {
     e.preventDefault();
     const m = formData();
-    if (!m.date || !m.teamA || !m.teamB) { window.KEL.openModal("資料不足", "至少要填日期、A 隊與 B 隊。 "); return; }
+    if (!m.date || !m.teamA || !m.teamB) { window.KEL.openModal("資料不足", "至少要選擇日期、A 隊與 B 隊。"); return; }
+    if (m.teamAShort === m.teamBShort) { window.KEL.openModal("隊伍重複", "A 隊與 B 隊不能選擇同一支戰隊。"); return; }
     const matches = window.KEL.getMatches();
     const idx = matches.findIndex(x => x.id === m.id);
     if (idx >= 0) matches[idx] = m; else matches.push(m);
     window.KEL.saveMatches(matches);
     resetForm(); renderList();
-    window.KEL.openModal("已儲存", "賽事已寫入瀏覽器 LocalStorage。正式版後台會改接伺服器資料庫。 ");
+    window.KEL.openModal("已儲存", "賽事已寫入瀏覽器 LocalStorage，隊名與隊徽已由戰隊資料庫自動帶入。");
   }
 
   function loadMatch(id) {
     const m = window.KEL.getMatches().find(x => x.id === id); if (!m) return;
     editId = id;
     const map = {
-      "#fLeague":m.league,"#fDate":m.date,"#fTime":m.time,"#fBo":m.bo,"#fTeamA":m.teamA,"#fTeamAShort":m.teamAShort,"#fTeamB":m.teamB,"#fTeamBShort":m.teamBShort,"#fStatus":m.status,"#fPrice":m.price,
+      "#fLeague":m.league,"#fDate":m.date,"#fTime":m.time,"#fBo":m.bo,"#fStatus":m.status,"#fPrice":m.price,
       "#fSummary":m.summary,"#fPreview":m.preview,"#fRecent":m.recent,"#fMatchup":m.matchup,"#fBp":m.bp,"#fConditions":m.conditions,"#fVariance":m.variance,"#fMarket":m.market,"#fPrimary":m.recommendationPrimary,"#fSecondary":m.recommendationSecondary,"#fPrediction":m.prediction,"#fRisk":m.risk,"#fResult":m.result
     };
     Object.entries(map).forEach(([sel,v]) => { if ($(sel)) $(sel).value = v ?? ""; });
+    fillTeamSelects(m.teamAShort, m.teamBShort);
     $("#fPremium").checked = !!m.premium; $("#fResultHit").checked = !!m.resultHit;
     $("#formTitle").textContent = "編輯賽事";
     window.scrollTo({top:0,behavior:"smooth"});
@@ -89,12 +142,17 @@
     editId = null; $("#matchForm")?.reset();
     if ($("#fPrice")) $("#fPrice").value = 39;
     if ($("#formTitle")) $("#formTitle").textContent = "新增賽事";
+    fillTeamSelects();
   }
 
   document.addEventListener("DOMContentLoaded", () => {
     $("#matchForm")?.addEventListener("submit", save);
     $("#resetForm")?.addEventListener("click", resetForm);
     $("#resetDemo")?.addEventListener("click", () => { window.KEL.resetMatches(); location.reload(); });
+    $("#fLeague")?.addEventListener("change", () => fillTeamSelects());
+    $("#fTeamASelect")?.addEventListener("change", renderTeamPreviews);
+    $("#fTeamBSelect")?.addEventListener("change", renderTeamPreviews);
+    fillTeamSelects();
     renderList();
   });
 })();

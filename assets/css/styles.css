@@ -371,3 +371,28 @@ h1 { margin: 8px 0 8px; font-size: clamp(30px, 5vw, 54px); line-height: 1.08; }
   .team-db-card { min-height: 170px; }
   .team-db-logo-wrap { width: 82px; height: 82px; }
 }
+
+
+/* v1.9 Admin team database selectors */
+.admin-team-preview {
+  min-height: 62px;
+  margin-top: 8px;
+  padding: 8px 10px;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  border: 1px solid rgba(255,255,255,.06);
+  border-radius: 12px;
+  background: rgba(255,255,255,.02);
+}
+.admin-team-preview img {
+  width: 44px;
+  height: 44px;
+  object-fit: contain;
+  flex: 0 0 44px;
+  filter: drop-shadow(0 3px 8px rgba(0,0,0,.25));
+}
+.admin-team-preview span { min-width: 0; display: grid; gap: 2px; }
+.admin-team-preview strong { font-size: 14px; }
+.admin-team-preview small { color: var(--muted); font-size: 11px; overflow-wrap: anywhere; }
+.admin-team-empty { color: var(--muted); font-size: 12px; }
