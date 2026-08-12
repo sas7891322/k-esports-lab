@@ -1,3 +1,5 @@
-# K Esports Lab v1.2
+# k-esports-lab
 
-首批正式內容：LCK 8/12 DNS vs NS 免費完整分析、GEN vs HLE K Premium 精選母版。正式金流尚未開放收款。
+K Esports Lab｜電競賽事分析研究室
+
+v1.3：加入首批官方賽事隊徽素材、手機版細節校正，並修正 GEN vs HLE 為 2026/08/13 18:00。

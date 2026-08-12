@@ -1,5 +1,5 @@
 (function () {
-  const STORAGE_KEY = "kel_matches_v12";
+  const STORAGE_KEY = "kel_matches_v13";
 
   function getMatches() {
     try {
@@ -36,7 +36,10 @@
     return `${y}-${m}-${day}`;
   }
 
-  function teamBadge(short) {
+  function teamBadge(short, logo, name) {
+    if (logo) {
+      return `<div class="team-logo-wrap"><img class="team-logo" src="${escapeHtml(logo)}" alt="${escapeHtml(name || short || "TEAM")} 隊徽" loading="lazy"></div>`;
+    }
     return `<div class="team-badge">${escapeHtml(short || "TEAM")}</div>`;
   }
 
@@ -53,9 +56,9 @@
           ${premiumPill(m)}
         </div>
         <div class="teams">
-          <div class="team">${teamBadge(m.teamAShort)}<div class="team-name">${escapeHtml(m.teamA)}</div></div>
+          <div class="team">${teamBadge(m.teamAShort, m.teamALogo, m.teamA)}<div class="team-name">${escapeHtml(m.teamA)}</div></div>
           <div class="vs">VS</div>
-          <div class="team">${teamBadge(m.teamBShort)}<div class="team-name">${escapeHtml(m.teamB)}</div></div>
+          <div class="team">${teamBadge(m.teamBShort, m.teamBLogo, m.teamB)}<div class="team-name">${escapeHtml(m.teamB)}</div></div>
         </div>
         <div class="match-note">${escapeHtml(m.summary || "")}</div>
         <div class="card-actions">
@@ -78,8 +81,8 @@
     if (!todayEl) return;
     const matches = getMatches();
     let today = matches.filter(m => m.date === todayISO() && m.status !== "finished");
-    // v1.2 首批正式內容為 2026/08/12，非當日開啟仍保留首批文章供檢視。
-    if (!today.length) today = matches.filter(m => m.date === "2026-08-12" && m.status !== "finished");
+    // 首批正式內容：若當日無賽事，保留最近發布場次供檢視。
+    if (!today.length) today = matches.filter(m => m.status !== "finished").sort((a,b) => a.date.localeCompare(b.date)).slice(0,2);
     todayEl.innerHTML = today.length ? today.map(matchCard).join("") : '<div class="empty">今日尚無已發布賽事。</div>';
 
     const featured = matches.filter(m => m.status !== "finished").sort((a,b) => (b.premium - a.premium) || a.date.localeCompare(b.date)).slice(0, 4);
@@ -143,9 +146,9 @@
       </div>
       <div class="card match-card ${m.premium ? "premium" : ""}" style="margin-bottom:18px">
         <div class="teams">
-          <div class="team">${teamBadge(m.teamAShort)}<div class="team-name">${escapeHtml(m.teamA)}</div></div>
+          <div class="team">${teamBadge(m.teamAShort, m.teamALogo, m.teamA)}<div class="team-name">${escapeHtml(m.teamA)}</div></div>
           <div class="vs">VS</div>
-          <div class="team">${teamBadge(m.teamBShort)}<div class="team-name">${escapeHtml(m.teamB)}</div></div>
+          <div class="team">${teamBadge(m.teamBShort, m.teamBLogo, m.teamB)}<div class="team-name">${escapeHtml(m.teamB)}</div></div>
         </div>
         <div class="match-note">${escapeHtml(m.summary || "")}</div>
       </div>

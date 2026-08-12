@@ -221,3 +221,49 @@ h1 { margin: 8px 0 8px; font-size: clamp(30px, 5vw, 54px); line-height: 1.08; }
   .admin-item-actions { justify-content: flex-start; }
   .stat-grid { grid-template-columns: 1fr; }
 }
+
+/* v1.3 team identity + mobile polish */
+.team-logo-wrap {
+  width: 72px;
+  height: 72px;
+  display: grid;
+  place-items: center;
+  border-radius: 18px;
+  overflow: hidden;
+  background: #1b1b1b;
+  border: 1px solid rgba(255,255,255,.08);
+  box-shadow: inset 0 0 0 1px rgba(255,255,255,.02);
+}
+.team-logo {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+}
+.match-card .teams { padding: 2px 0; }
+.match-card.premium .team-logo-wrap { border-color: rgba(244,196,78,.28); }
+.premium-lock .unlock-btn { width: 100%; min-height: 48px; }
+
+@media (max-width: 720px) {
+  .hero-card h1 { font-size: 32px; }
+  .hero-card p { font-size: 14px; line-height: 1.7; }
+  .match-meta { gap: 6px; }
+  .pill { padding: 5px 8px; font-size: 11px; }
+  .team-logo-wrap { width: 64px; height: 64px; border-radius: 16px; }
+  .team-name { font-size: 13px; line-height: 1.35; }
+  .match-note { font-size: 13px; line-height: 1.7; }
+  .card-actions .btn { min-height: 44px; display: grid; place-items: center; }
+  .analysis-section { padding: 17px; }
+  .analysis-section h3 { font-size: 17px; }
+  .analysis-section p { font-size: 14px; line-height: 1.75; }
+  .score-box strong { font-size: 22px; }
+}
+
+@media (max-width: 390px) {
+  .shell { width: min(100% - 16px, 1180px); }
+  .match-card { padding: 13px; }
+  .teams { gap: 8px; }
+  .team-logo-wrap { width: 58px; height: 58px; }
+  .team-name { font-size: 12px; }
+  .vs { font-size: 12px; }
+}
