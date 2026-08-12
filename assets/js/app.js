@@ -1,12 +1,30 @@
 (function () {
   const STORAGE_KEY = "kel_matches_v13";
 
+  let cloudMatches = null;
+
   function getMatches() {
+    if (Array.isArray(cloudMatches)) return cloudMatches;
     try {
-      const saved = JSON.parse(localStorage.getItem(STORAGE_KEY));
+      const saved = JSON.parse(localStorage.getItem(STORAGE_KEY) || "null");
       if (Array.isArray(saved) && saved.length) return saved;
-    } catch (e) {}
-    return window.KEL_DEFAULT_MATCHES || [];
+    } catch {}
+    return JSON.parse(JSON.stringify(window.KEL_DEFAULT_MATCHES || []));
+  }
+
+  async function loadCloudMatches() {
+    try {
+      const res = await fetch("/api/matches", { headers: { "Accept": "application/json" } });
+      if (!res.ok) throw new Error(`HTTP ${res.status}`);
+      const data = await res.json();
+      if (Array.isArray(data.matches)) {
+        cloudMatches = data.matches;
+        return true;
+      }
+    } catch (error) {
+      console.info("Cloud matches unavailable; using local/default data.", error);
+    }
+    return false;
   }
 
   function saveMatches(matches) {
@@ -222,9 +240,15 @@
     return String(value ?? "").replace(/[&<>'"]/g, ch => ({"&":"&amp;","<":"&lt;",">":"&gt;","'":"&#39;",'"':"&quot;"}[ch]));
   }
 
-  window.KEL = { getMatches, saveMatches, resetMatches, openModal, matchCard, listRow, fmtDate, escapeHtml };
+  window.KEL = { getMatches, loadCloudMatches, saveMatches, resetMatches, openModal, matchCard, listRow, fmtDate, escapeHtml };
 
-  document.addEventListener("DOMContentLoaded", () => {
-    initMenu(); initModal(); renderHome(); renderLeague(); renderMatch(); bindUnlockButtons();
+  document.addEventListener("DOMContentLoaded", async () => {
+    initMenu();
+    initModal();
+    await loadCloudMatches();
+    renderHome();
+    renderLeague();
+    renderMatch();
+    bindUnlockButtons();
   });
 })();

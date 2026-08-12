@@ -396,3 +396,44 @@ h1 { margin: 8px 0 8px; font-size: clamp(30px, 5vw, 54px); line-height: 1.08; }
 .admin-team-preview strong { font-size: 14px; }
 .admin-team-preview small { color: var(--muted); font-size: 11px; overflow-wrap: anywhere; }
 .admin-team-empty { color: var(--muted); font-size: 12px; }
+
+
+/* v2.0 Cloud admin */
+.admin-login-gate {
+  min-height: calc(100vh - 72px);
+  display: grid;
+  place-items: center;
+  padding: 28px 0;
+}
+.admin-login-card {
+  width: min(440px, 100%);
+  padding: 26px;
+}
+.admin-login-card h1 {
+  font-size: 30px;
+  margin: 8px 0;
+}
+.admin-login-card p {
+  color: var(--muted);
+  line-height: 1.65;
+}
+.admin-login-form {
+  display: grid;
+  gap: 10px;
+  margin-top: 18px;
+}
+.admin-login-form label {
+  color: #a9bdd2;
+  font-size: 12px;
+  font-weight: 800;
+}
+.admin-setup-hint {
+  margin-top: 16px;
+  padding: 12px;
+  border-radius: 12px;
+  border: 1px solid rgba(244,196,78,.22);
+  background: rgba(244,196,78,.07);
+  color: #e7d28e;
+  line-height: 1.6;
+  font-size: 13px;
+}

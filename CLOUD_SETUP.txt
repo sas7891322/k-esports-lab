@@ -1,0 +1,19 @@
+K Esports Lab v2.0 雲端後台設定
+
+1. 在 Vercel 的 k-esports-lab 專案進入 Marketplace / Storage。
+2. 新增一個 Postgres 資料庫（建議 Neon）。
+3. 將資料庫連接到 k-esports-lab。Vercel 會自動加入 DATABASE_URL。
+4. 在該資料庫的 Query / SQL 工具依序執行：
+   database/schema.sql
+   database/seed.sql
+5. Vercel → Project Settings → Environment Variables 新增：
+   ADMIN_PASSWORD = 你自己的後台密碼
+   SESSION_SECRET = 一組至少 32 字元的隨機字串
+6. 三個變數都套用 Production（需要的話也可套 Preview）。
+7. 重新部署最新 Production。
+8. 開啟 /admin.html，輸入 ADMIN_PASSWORD。
+9. 新增或修改賽事後，資料會直接寫進 Postgres，所有裝置與訪客共用。
+
+安全：
+- ADMIN_PASSWORD、SESSION_SECRET、DATABASE_URL 不要寫進 GitHub。
+- Premium 完整內容由 /api/matches 公開 API 自動遮蔽；管理後台才會讀取完整內容。
