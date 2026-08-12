@@ -452,3 +452,10 @@ h1 { margin: 8px 0 8px; font-size: clamp(30px, 5vw, 54px); line-height: 1.08; }
   text-align: center;
   color: var(--muted);
 }
+
+
+/* v2.0.2 Hidden state fix */
+.admin-access-check[hidden],
+#adminApp[hidden] {
+  display: none !important;
+}
