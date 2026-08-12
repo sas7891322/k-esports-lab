@@ -473,3 +473,21 @@ h1 { margin: 8px 0 8px; font-size: clamp(30px, 5vw, 54px); line-height: 1.08; }
   font-weight: 800;
   cursor: pointer;
 }
+
+
+/* v2.0.4 Remove redundant admin summary card */
+.admin-wrap {
+  grid-template-columns: minmax(0, 1fr) !important;
+}
+.mobile-logout {
+  width: 100%;
+  appearance: none;
+  border: 1px solid rgba(255, 104, 124, .35);
+  background: rgba(255, 82, 111, .08);
+  color: #ff8da0;
+  border-radius: 12px;
+  padding: 12px 14px;
+  font: inherit;
+  font-weight: 800;
+  text-align: left;
+}
