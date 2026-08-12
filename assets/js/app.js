@@ -116,11 +116,25 @@
       </div>`).join("") || '<div class="empty">尚無完賽紀錄。</div>';
 
     const leaguesEl = document.querySelector("#leagueGrid");
-    if (leaguesEl) leaguesEl.innerHTML = (window.KEL_LEAGUES || []).map(l => {
-      const lm = matches.filter(m => m.league === l && m.status !== "finished");
-      const p = lm.filter(m => m.premium).length;
-      return `<a class="card league-card" href="league.html?league=${encodeURIComponent(l)}"><div class="league-mark">${l.slice(0,3)}</div><strong>${l}</strong><small>${lm.length} 場｜${p} 場 Premium</small></a>`;
-    }).join("");
+    if (leaguesEl) {
+      const leagueLogos = {
+        LCK: "assets/img/leagues/lck.png",
+        LPL: "assets/img/leagues/lpl.png",
+        LCP: "assets/img/leagues/lcp.png",
+        LEC: "assets/img/leagues/lec.png",
+        LCS: "assets/img/leagues/lcs.png",
+        CBLOL: "assets/img/leagues/cblol.png"
+      };
+      leaguesEl.innerHTML = (window.KEL_LEAGUES || []).map(l => {
+        const lm = matches.filter(m => m.league === l && m.status !== "finished");
+        const p = lm.filter(m => m.premium).length;
+        const logo = leagueLogos[l];
+        const mark = logo
+          ? `<div class="league-mark league-logo-mark"><img src="${logo}" alt="${escapeHtml(l)} 賽區 Logo" loading="lazy"></div>`
+          : `<div class="league-mark">${escapeHtml(l.slice(0,3))}</div>`;
+        return `<a class="card league-card" href="league.html?league=${encodeURIComponent(l)}">${mark}<strong>${escapeHtml(l)}</strong><small>${lm.length} 場｜${p} 場 Premium</small></a>`;
+      }).join("");
+    }
   }
 
   function renderLeague() {
