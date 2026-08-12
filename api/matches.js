@@ -1,8 +1,12 @@
 import { dbReady, listMatches } from "./_lib/db.js";
 
 const LOCKED_FIELDS = [
-  "recent","matchup","bp","conditions","variance","market",
-  "recommendationPrimary","recommendationSecondary","prediction","risk"
+  "recent",
+  "matchup",
+  "conditions",
+  "risk",
+  "recommendationPrimary",
+  "prediction"
 ];
 
 function publicView(match) {

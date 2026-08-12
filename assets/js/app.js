@@ -62,7 +62,12 @@
   }
 
   function premiumPill(m) {
-    return m.premium ? '<span class="pill gold">★ K PREMIUM</span>' : '<span class="pill green">免費完整分析</span>';
+    return m.premium ? '<span class="pill gold">★ K PREMIUM</span>' : '<span class="pill green">一般分析</span>';
+  }
+
+  function excerpt(value, max = 100) {
+    const text = String(value || "").trim();
+    return text.length > max ? `${text.slice(0, max)}…` : text;
   }
 
   function matchCard(m) {
@@ -78,9 +83,9 @@
           <div class="vs">VS</div>
           <div class="team">${teamBadge(m.teamBShort, m.teamBLogo, m.teamB)}<div class="team-name">${escapeHtml(m.teamB)}</div></div>
         </div>
-        <div class="match-note">${escapeHtml(m.summary || "")}</div>
+        <div class="match-note">${escapeHtml(excerpt(m.preview || "", 110))}</div>
         <div class="card-actions">
-          <a class="btn ${m.premium ? "btn-gold" : "btn-primary"}" href="match.html?id=${encodeURIComponent(m.id)}">${m.premium ? `查看 K Premium｜NT$${m.price || 39}` : "查看完整分析"}</a>
+          <a class="btn ${m.premium ? "btn-gold" : "btn-primary"}" href="match.html?id=${encodeURIComponent(m.id)}">${m.premium ? `查看 K Premium｜NT$${m.price || 39}` : "查看賽事分析"}</a>
         </div>
       </article>`;
   }
@@ -171,40 +176,38 @@
     if (!m) { root.innerHTML = '<div class="empty">找不到賽事。</div>'; return; }
     document.title = `${m.teamAShort} vs ${m.teamBShort}｜K Esports Lab`;
 
-    const locked = m.premium;
+    const locked = !!m.premium;
     root.innerHTML = `
       <div class="page-head">
         <div class="match-meta"><span class="pill">${escapeHtml(m.league)}</span><span>${fmtDate(m.date)}</span><span>${escapeHtml(m.time)}</span><span>${escapeHtml(m.bo)}</span>${m.week ? `<span>${escapeHtml(m.week)}</span>` : ""}${premiumPill(m)}</div>
       </div>
+
       <div class="card match-card ${m.premium ? "premium" : ""}" style="margin-bottom:18px">
         <div class="teams">
           <div class="team">${teamBadge(m.teamAShort, m.teamALogo, m.teamA)}<div class="team-name">${escapeHtml(m.teamA)}</div></div>
           <div class="vs">VS</div>
           <div class="team">${teamBadge(m.teamBShort, m.teamBLogo, m.teamB)}<div class="team-name">${escapeHtml(m.teamB)}</div></div>
         </div>
-        <div class="match-note">${escapeHtml(m.summary || "")}</div>
       </div>
+
       <div class="analysis-layout">
         <main class="analysis-main">
-          ${analysisSection("賽前總覽", m.preview)}
+          ${analysisSection("賽事觀點", m.preview)}
+
           ${locked ? premiumLock(m) : `
-            ${analysisSection("近期狀態", m.recent)}
-            ${analysisSection("關鍵對位", m.matchup)}
-            ${analysisSection("版本與 BP", m.bp)}
-            ${analysisSection("雙方勝負條件", m.conditions)}
-            ${analysisSection("本場變數", m.variance)}
-            ${analysisSection("盤口二次核實", m.market)}
-            ${analysisSection("主推薦", m.recommendationPrimary)}
-            ${analysisSection("次推薦", m.recommendationSecondary)}
-            ${analysisSection("風險提醒", m.risk)}
+            ${analysisSection("推薦方向", m.recommendationPrimary)}
+            ${analysisSection("預測比分", m.prediction)}
           `}
         </main>
+
         <aside class="sticky-side">
-          <div class="card score-box"><span>預測比分</span><strong>${locked ? "🔒" : escapeHtml(m.prediction || "-")}</strong></div>
+          ${locked
+            ? `<div class="card score-box premium-score-locked"><span>推薦方向・預測比分</span><strong>🔒 K Premium</strong></div>`
+            : `<div class="card score-box"><span>預測比分</span><strong>${escapeHtml(m.prediction || "-")}</strong></div>`}
           <div class="card card-pad">
             <div class="eyebrow">K Esports Lab</div>
             <h3 style="margin:6px 0 8px">分析原則</h3>
-            <p style="margin:0;color:var(--muted);font-size:13px;line-height:1.7">免費與付費內容皆保留風險提醒。本站不接受投注、不代客下注、不提供派彩。</p>
+            <p style="margin:0;color:var(--muted);font-size:13px;line-height:1.7">賽事觀點著重比賽內容與判斷脈絡；預測與推薦皆不代表保證賽果。</p>
           </div>
         </aside>
       </div>`;
@@ -216,12 +219,17 @@
     return `<section class="card premium-lock">
       <div class="lock-icon">🔒</div>
       <div class="eyebrow" style="color:var(--gold)">K PREMIUM｜精選深度分析</div>
-      <h3>以下內容需解鎖</h3>
-      <p>完整精裝分析著重研究深度，不代表保證賽果。</p>
+      <h3>最終判斷與深度分析需解鎖</h3>
+      <p>賽事觀點維持公開；K Premium 提供完整判斷依據與最終結論。</p>
       <div class="premium-features">
-        <span>近期狀態與深度數據</span><span>關鍵選手／路線對位</span><span>版本與 BP 分析</span><span>勝負條件與本場變數</span><span>盤口二次核實</span><span>主推薦、次推薦與最終結論</span>
+        <span>近期狀態</span>
+        <span>關鍵對位</span>
+        <span>雙方勝負條件</span>
+        <span>風險提醒</span>
+        <span>推薦方向</span>
+        <span>預測比分</span>
       </div>
-      <button class="btn btn-gold unlock-btn" data-price="${m.price || 39}">NT$${m.price || 39} 解鎖本場完整分析</button>
+      <button class="btn btn-gold unlock-btn" data-price="${m.price || 39}">NT$${m.price || 39} 解鎖 K Premium</button>
       <p style="margin-bottom:0">正式金流尚在審核／串接階段，目前不會產生任何收款。</p>
     </section>`;
   }

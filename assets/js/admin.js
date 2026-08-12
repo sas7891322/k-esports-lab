@@ -97,6 +97,12 @@
     renderList();
   }
 
+  function updatePremiumFields() {
+    const premium = checked("#fPremium");
+    const fields = $("#premiumFields");
+    if (fields) fields.hidden = !premium;
+  }
+
   function renderList() {
     const root = $("#adminList");
     const matches = adminMatches.slice().sort((a,b) => (b.date || "").localeCompare(a.date || ""));
@@ -120,7 +126,10 @@
     const teamB = selectedTeam("B");
     const teamAShort = teamA?.short || "";
     const teamBShort = teamB?.short || "";
+    const old = editId ? adminMatches.find(x => x.id === editId) : null;
+    const premium = checked("#fPremium");
     const id = editId || `${slugify(val("#fLeague"))}-${slugify(teamAShort)}-${slugify(teamBShort)}-${date.replaceAll("-","")}-${Date.now().toString().slice(-5)}`;
+
     return {
       id,
       league: val("#fLeague") || "LCK",
@@ -133,16 +142,26 @@
       teamB: teamB?.name || "",
       teamBShort,
       teamBLogo: teamB?.logo || "",
-      status: val("#fStatus") || "upcoming",
-      premium: checked("#fPremium"),
-      price: Number(val("#fPrice") || 39),
-      summary: val("#fSummary"),
+
+      // 狀態不再於新增表單手動維護；新賽事預設 upcoming。
+      status: old?.status || "upcoming",
+
+      // 所有場次都固定填寫。
       preview: val("#fPreview"),
-      recent: val("#fRecent"), matchup: val("#fMatchup"), bp: val("#fBp"), conditions: val("#fConditions"),
-      variance: val("#fVariance"), market: val("#fMarket"),
-      recommendationPrimary: val("#fPrimary"), recommendationSecondary: val("#fSecondary"),
-      prediction: val("#fPrediction"), risk: val("#fRisk"),
-      result: val("#fResult"), resultHit: checked("#fResultHit")
+      recommendationPrimary: val("#fPrimary"),
+      prediction: val("#fPrediction"),
+
+      // K Premium 才使用的深度內容。
+      premium,
+      price: premium ? Number(val("#fPrice") || 39) : 0,
+      recent: premium ? val("#fRecent") : "",
+      matchup: premium ? val("#fMatchup") : "",
+      conditions: premium ? val("#fConditions") : "",
+      risk: premium ? val("#fRisk") : "",
+
+      // 保留既有完賽資料，之後移到獨立賽果管理介面。
+      result: old?.result || "",
+      resultHit: !!old?.resultHit
     };
   }
 
@@ -172,15 +191,23 @@
     const m = adminMatches.find(x => x.id === id); if (!m) return;
     editId = id;
     const map = {
-      "#fLeague":m.league,"#fDate":m.date,"#fTime":m.time,"#fBo":m.bo,"#fStatus":m.status,"#fPrice":m.price,
-      "#fSummary":m.summary,"#fPreview":m.preview,"#fRecent":m.recent,"#fMatchup":m.matchup,"#fBp":m.bp,
-      "#fConditions":m.conditions,"#fVariance":m.variance,"#fMarket":m.market,"#fPrimary":m.recommendationPrimary,
-      "#fSecondary":m.recommendationSecondary,"#fPrediction":m.prediction,"#fRisk":m.risk,"#fResult":m.result
+      "#fLeague":m.league,
+      "#fDate":m.date,
+      "#fTime":m.time,
+      "#fBo":m.bo,
+      "#fPrice":m.price || 39,
+      "#fPreview":m.preview,
+      "#fRecent":m.recent,
+      "#fMatchup":m.matchup,
+      "#fConditions":m.conditions,
+      "#fPrimary":m.recommendationPrimary,
+      "#fPrediction":m.prediction,
+      "#fRisk":m.risk
     };
     Object.entries(map).forEach(([sel,v]) => { if ($(sel)) $(sel).value = v ?? ""; });
     fillTeamSelects(m.teamAShort, m.teamBShort);
     $("#fPremium").checked = !!m.premium;
-    $("#fResultHit").checked = !!m.resultHit;
+    updatePremiumFields();
     $("#formTitle").textContent = "編輯賽事";
     window.scrollTo({top:0,behavior:"smooth"});
   }
@@ -203,6 +230,7 @@
     $("#matchForm")?.reset();
     if ($("#fPrice")) $("#fPrice").value = 39;
     if ($("#formTitle")) $("#formTitle").textContent = "新增賽事";
+    updatePremiumFields();
     fillTeamSelects();
   }
 
@@ -215,6 +243,7 @@
     $("#fLeague")?.addEventListener("change", () => fillTeamSelects());
     $("#fTeamASelect")?.addEventListener("change", renderTeamPreviews);
     $("#fTeamBSelect")?.addEventListener("change", renderTeamPreviews);
+    $("#fPremium")?.addEventListener("change", updatePremiumFields);
     fillTeamSelects();
     checkSession();
   });
