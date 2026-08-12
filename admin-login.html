@@ -1,0 +1,45 @@
+<!doctype html>
+<html lang="zh-Hant">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <meta name="robots" content="noindex,nofollow">
+  <meta name="theme-color" content="#06111f">
+  <title>管理員登入｜K Esports Lab</title>
+  <link rel="icon" href="assets/img/k-logo.svg">
+  <link rel="stylesheet" href="assets/css/styles.css">
+</head>
+<body>
+<header class="topbar">
+  <div class="shell topbar-inner">
+    <a class="brand" href="index.html">
+      <img src="assets/img/k-logo.svg" alt="">
+      <span>K ESPORTS LAB<small>內容管理工具</small></span>
+    </a>
+    <nav class="nav"><a href="index.html">返回前台</a></nav>
+  </div>
+</header>
+
+<main class="shell">
+  <section class="admin-login-gate">
+    <div class="card admin-login-card">
+      <div class="eyebrow">SECURE ADMIN</div>
+      <h1>管理員登入</h1>
+      <p id="adminLoginStatus">正在確認登入狀態…</p>
+
+      <form id="adminLoginForm" class="admin-login-form" hidden>
+        <label for="adminPassword">管理員密碼</label>
+        <input id="adminPassword" class="input" type="password" autocomplete="current-password" required>
+        <button class="btn btn-primary" type="submit">登入後台</button>
+      </form>
+
+      <div id="adminSetupHint" class="admin-setup-hint" hidden>
+        後台尚未完成設定，請確認 Vercel 的 DATABASE_URL、ADMIN_PASSWORD 與 SESSION_SECRET。
+      </div>
+    </div>
+  </section>
+</main>
+
+<script src="assets/js/admin-login.js"></script>
+</body>
+</html>

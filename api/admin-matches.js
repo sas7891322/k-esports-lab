@@ -2,6 +2,7 @@ import { isAdmin } from "./_lib/auth.js";
 import { dbReady, listMatches, upsertMatch, deleteMatch } from "./_lib/db.js";
 
 export default async function handler(req, res) {
+  res.setHeader("Cache-Control", "no-store, max-age=0");
   if (!dbReady()) {
     res.status(503).json({ error: "DB_NOT_CONFIGURED" });
     return;

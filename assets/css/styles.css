@@ -437,3 +437,18 @@ h1 { margin: 8px 0 8px; font-size: clamp(30px, 5vw, 54px); line-height: 1.08; }
   line-height: 1.6;
   font-size: 13px;
 }
+
+
+/* v2.0.1 Admin access hardening */
+.admin-access-check {
+  min-height: calc(100vh - 72px);
+  display: grid;
+  place-items: center;
+  padding: 28px 0;
+}
+.admin-access-check .card {
+  width: min(420px, 100%);
+  padding: 22px;
+  text-align: center;
+  color: var(--muted);
+}

@@ -2,6 +2,7 @@ import { authReady, validPassword, makeSessionCookie } from "./_lib/auth.js";
 import { dbReady } from "./_lib/db.js";
 
 export default function handler(req, res) {
+  res.setHeader("Cache-Control", "no-store, max-age=0");
   if (req.method !== "POST") {
     res.status(405).json({ error: "METHOD_NOT_ALLOWED" });
     return;

@@ -16,6 +16,9 @@
     let body = {};
     try { body = await res.json(); } catch {}
     if (!res.ok) {
+      if (res.status === 401 && !url.includes("admin-session")) {
+        location.replace("admin-login.html");
+      }
       const err = new Error(body.error || `HTTP_${res.status}`);
       err.status = res.status;
       throw err;
@@ -62,54 +65,30 @@
   }
 
   async function checkSession() {
-    const gate = $("#adminLoginGate");
+    const access = $("#adminAccessCheck");
     const app = $("#adminApp");
-    const status = $("#adminLoginStatus");
-    const form = $("#adminLoginForm");
-    const hint = $("#adminSetupHint");
 
     try {
-      const session = await api("/api/admin-session", { method: "GET", headers: {} });
-      if (!session.configured) {
-        status.textContent = "雲端後台尚未完成設定";
-        hint.hidden = false;
-        form.hidden = true;
-        return;
-      }
-      if (!session.authenticated) {
-        status.textContent = "請輸入管理員密碼";
-        form.hidden = false;
-        hint.hidden = true;
-        return;
+      const session = await api("/api/admin-session", { method: "GET", headers: {}, cache: "no-store" });
+      if (!session.configured || !session.authenticated) {
+        location.replace("admin-login.html");
+        return false;
       }
 
-      gate.hidden = true;
-      app.hidden = false;
+      if (access) access.hidden = true;
+      if (app) app.hidden = false;
       await loadAdminMatches();
+      return true;
     } catch {
-      status.textContent = "目前無法連線至後台 API";
-      hint.hidden = false;
+      location.replace("admin-login.html");
+      return false;
     }
   }
 
-  async function login(e) {
-    e.preventDefault();
-    const status = $("#adminLoginStatus");
-    try {
-      await api("/api/admin-login", {
-        method: "POST",
-        body: JSON.stringify({ password: val("#adminPassword") })
-      });
-      status.textContent = "登入成功";
-      location.reload();
-    } catch (err) {
-      status.textContent = err.status === 401 ? "密碼錯誤" : "登入失敗，請確認雲端設定";
-    }
-  }
 
   async function logout() {
     await api("/api/admin-logout", { method: "POST", body: "{}" }).catch(() => {});
-    location.reload();
+    location.replace("admin-login.html");
   }
 
   async function loadAdminMatches() {
@@ -228,7 +207,6 @@
   }
 
   document.addEventListener("DOMContentLoaded", () => {
-    $("#adminLoginForm")?.addEventListener("submit", login);
     $("#adminLogout")?.addEventListener("click", logout);
     $("#matchForm")?.addEventListener("submit", save);
     $("#resetForm")?.addEventListener("click", resetForm);
