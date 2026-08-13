@@ -186,22 +186,22 @@
 
       <div class="analysis-layout">
         <main class="analysis-main">
-          ${m.status === "finished" && m.result ? analysisSection("最終賽果", m.result) : ""}\n          ${analysisSection("賽事觀點", m.preview)}
+          ${m.status === "finished" && m.result ? analysisSection("最終賽果", m.result) : ""}\n          ${analysisSection("分析看法", m.preview)}
 
           ${locked ? premiumLock(m) : `
-            ${analysisSection("推薦方向", m.recommendationPrimary)}
+            ${analysisSection("賽事觀點", m.recommendationPrimary)}
             ${analysisSection("預測比分", m.prediction)}
           `}
         </main>
 
         <aside class="sticky-side">
           ${locked
-            ? `<div class="card score-box premium-score-locked"><span>推薦方向・預測比分</span><strong>🔒 K Premium</strong></div>`
+            ? `<div class="card score-box premium-score-locked"><span>賽事觀點・預測比分</span><strong>🔒 K Premium</strong></div>`
             : `<div class="card score-box"><span>預測比分</span><strong>${escapeHtml(m.prediction || "-")}</strong></div>`}
           <div class="card card-pad">
             <div class="eyebrow">K Esports Lab</div>
             <h3 style="margin:6px 0 8px">分析原則</h3>
-            <p style="margin:0;color:var(--muted);font-size:13px;line-height:1.7">賽事觀點著重比賽內容與判斷脈絡；預測與推薦皆不代表保證賽果。</p>
+            <p style="margin:0;color:var(--muted);font-size:13px;line-height:1.7">分析看法與賽事觀點著重比賽內容與判斷脈絡；所有預測內容皆不代表保證賽果。</p>
           </div>
         </aside>
       </div>`;
@@ -216,14 +216,14 @@
       <div class="eyebrow" style="color:var(--gold)">K PREMIUM｜數位內容商品</div>
       <h3>${escapeHtml(m.teamAShort)} vs ${escapeHtml(m.teamBShort)}｜精選深度分析</h3>
       <div class="premium-product-price">NT$${price}<small>／單篇數位文章</small></div>
-      <p>賽事觀點維持公開；購買後解鎖指定賽事的完整研究內容與最終結論。</p>
+      <p>分析看法維持公開；購買後解鎖指定賽事的完整研究內容與最終結論。</p>
       <div class="premium-features">
         <span>近期狀態</span>
         <span>關鍵對位</span>
         <span>版本與 BP</span>
         <span>雙方勝負條件</span>
-        <span>風險提醒</span>
-        <span>推薦方向與預測比分</span>
+        <span>不確定性提醒</span>
+        <span>賽事觀點與預測比分</span>
       </div>
       <div class="delivery-note"><b>商品交付方式</b><span>正式啟用後，付款成功並經系統確認，即解鎖本篇 K Premium 數位分析文章閱讀權限。</span></div>
       <button class="btn btn-gold unlock-btn" data-price="${price}">NT$${price} 解鎖本篇 K Premium</button>
