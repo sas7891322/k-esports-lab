@@ -100,13 +100,7 @@
   }
 
   function renderHome() {
-    const todayEl = document.querySelector("#todayMatches");
-    if (!todayEl) return;
     const matches = getMatches();
-    let today = matches.filter(m => m.date === todayISO() && m.status !== "finished");
-    // 首批正式內容：若當日無賽事，保留最近發布場次供檢視。
-    if (!today.length) today = matches.filter(m => m.status !== "finished").sort((a,b) => a.date.localeCompare(b.date)).slice(0,2);
-    todayEl.innerHTML = today.length ? today.map(matchCard).join("") : '<div class="empty">今日尚無已發布賽事。</div>';
 
     const featured = matches.filter(m => m.status !== "finished").sort((a,b) => (b.premium - a.premium) || a.date.localeCompare(b.date)).slice(0, 4);
     const featuredEl = document.querySelector("#featuredList");
