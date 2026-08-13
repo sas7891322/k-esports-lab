@@ -210,26 +210,31 @@
   }
 
   function premiumLock(m) {
-    return `<section class="card premium-lock">
+    const price = m.price || 39;
+    return `<section class="card premium-lock premium-product-box">
       <div class="lock-icon">🔒</div>
-      <div class="eyebrow" style="color:var(--gold)">K PREMIUM｜精選深度分析</div>
-      <h3>最終判斷與深度分析需解鎖</h3>
-      <p>賽事觀點維持公開；K Premium 提供完整判斷依據與最終結論。</p>
+      <div class="eyebrow" style="color:var(--gold)">K PREMIUM｜數位內容商品</div>
+      <h3>${escapeHtml(m.teamAShort)} vs ${escapeHtml(m.teamBShort)}｜精選深度分析</h3>
+      <div class="premium-product-price">NT$${price}<small>／單篇數位文章</small></div>
+      <p>賽事觀點維持公開；購買後解鎖指定賽事的完整研究內容與最終結論。</p>
       <div class="premium-features">
         <span>近期狀態</span>
         <span>關鍵對位</span>
+        <span>版本與 BP</span>
         <span>雙方勝負條件</span>
         <span>風險提醒</span>
-        <span>推薦方向</span>
-        <span>預測比分</span>
+        <span>推薦方向與預測比分</span>
       </div>
-      <button class="btn btn-gold unlock-btn" data-price="${m.price || 39}">NT$${m.price || 39} 解鎖 K Premium</button>
-      <p style="margin-bottom:0">正式金流尚在審核／串接階段，目前不會產生任何收款。</p>
+      <div class="delivery-note"><b>商品交付方式</b><span>正式啟用後，付款成功並經系統確認，即解鎖本篇 K Premium 數位分析文章閱讀權限。</span></div>
+      <button class="btn btn-gold unlock-btn" data-price="${price}">NT$${price} 解鎖本篇 K Premium</button>
+      <div class="purchase-policy-links"><a href="premium.html">商品說明</a><a href="digital-content.html">數位內容／退款說明</a><a href="terms.html">使用條款</a><a href="contact.html">客服聯絡</a></div>
+      <p class="payment-review-note">目前金流收款功能申請／審核中，尚未開放實際付款，點擊按鈕不會產生任何扣款。</p>
+      <p class="service-boundary-note">本站僅販售數位分析內容，不接受投注、不代客下注、不收取下注資金、不提供派彩。</p>
     </section>`;
   }
 
   function bindUnlockButtons() {
-    document.querySelectorAll(".unlock-btn").forEach(btn => btn.addEventListener("click", () => openModal("K Premium 尚未開放收款", `單場 NT$${btn.dataset.price || 39} 解鎖流程已完成前台設計。待金流審核與正式訂單系統完成後才會開放付款。`)));
+    document.querySelectorAll(".unlock-btn").forEach(btn => btn.addEventListener("click", () => openModal("K Premium 金流申請／審核中", `本篇商品售價為 NT$${btn.dataset.price || 39}。目前尚未開放實際付款，因此不會產生任何扣款；正式啟用後，付款成功將解鎖指定數位分析文章。`)));
   }
 
   function openModal(title, text) {

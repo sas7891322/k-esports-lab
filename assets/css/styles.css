@@ -585,3 +585,99 @@ h1 { margin: 8px 0 8px; font-size: clamp(30px, 5vw, 54px); line-height: 1.08; }
 .result-hit{color:#8ee0b5;font-size:12px;font-weight:800}.result-miss{color:var(--muted);font-size:12px}
 .btn-small{padding:8px 11px;min-height:36px;font-size:12px}
 @media(max-width:720px){.admin-match-item{grid-template-columns:1fr}.admin-item-actions{justify-content:flex-start}.admin-result-entry{grid-template-columns:auto 54px 16px 54px auto}.admin-result-entry .btn{grid-column:1/-1;width:100%;justify-self:stretch}.result-score-input{width:54px}}
+
+/* v2.1 K Premium merchant review / product sales page */
+.merchant-summary {
+  padding: 20px 22px;
+  display: grid;
+  grid-template-columns: minmax(0,1fr) auto;
+  gap: 20px;
+  align-items: center;
+  border-color: rgba(244,196,78,.34);
+  background: linear-gradient(135deg, rgba(65,49,14,.26), rgba(10,25,44,.96) 48%);
+}
+.merchant-summary h2 { margin: 5px 0 8px; font-size: 22px; }
+.merchant-summary p { margin: 0; max-width: 760px; color: #afc3d9; line-height: 1.75; }
+.merchant-summary-actions { display: flex; flex-wrap: wrap; gap: 9px; }
+
+.premium-hero { padding: 36px 0 8px; }
+.premium-product-hero {
+  padding: 30px;
+  display: grid;
+  grid-template-columns: minmax(0,1fr) 260px;
+  gap: 28px;
+  align-items: center;
+  border-color: rgba(244,196,78,.45);
+  background: linear-gradient(135deg, rgba(80,60,15,.30), rgba(10,25,44,.97) 48%);
+}
+.premium-product-hero h1 { font-size: clamp(30px,5vw,48px); }
+.premium-product-hero p { margin: 0; max-width: 760px; color: #c4d2e0; line-height: 1.8; }
+.premium-hero-actions { margin-top: 20px; display: flex; flex-wrap: wrap; gap: 10px; }
+.premium-price-card {
+  min-height: 180px;
+  padding: 24px 18px;
+  border: 1px solid rgba(244,196,78,.30);
+  border-radius: 18px;
+  background: rgba(244,196,78,.07);
+  display: grid;
+  place-items: center;
+  text-align: center;
+  align-content: center;
+  gap: 4px;
+}
+.premium-price-card span { color: #d7c692; font-size: 13px; }
+.premium-price-card strong { color: var(--gold-2); font-size: 42px; line-height: 1.1; }
+.premium-price-card small { color: #9faeBC; }
+.premium-section-title { margin: 6px 0 16px; font-size: 22px; }
+.premium-detail-list { display: grid; gap: 10px; }
+.premium-detail-list > div { padding: 13px 14px; border: 1px solid var(--line); border-radius: 13px; background: rgba(255,255,255,.018); }
+.premium-detail-list b { display: block; color: #f7e8bc; margin-bottom: 4px; }
+.premium-detail-list span { color: var(--muted); font-size: 13px; line-height: 1.65; }
+.purchase-steps { list-style: none; padding: 0; margin: 0; display: grid; gap: 12px; }
+.purchase-steps li { display: grid; grid-template-columns: 34px 1fr; gap: 11px; align-items: start; }
+.purchase-steps li > span { width: 34px; height: 34px; display: grid; place-items: center; border-radius: 10px; color: #17120a; background: linear-gradient(135deg,var(--gold),var(--gold-2)); font-weight: 900; }
+.purchase-steps b { display: block; margin-top: 2px; }
+.purchase-steps p { margin: 4px 0 0; color: var(--muted); line-height: 1.65; font-size: 13px; }
+.review-status { margin-top: 16px; padding: 13px 14px; border-radius: 13px; border: 1px solid rgba(35,199,255,.20); background: rgba(35,199,255,.06); }
+.review-status b { color: #9fe7ff; }
+.review-status p { margin: 5px 0 0; color: #91a7c1; font-size: 13px; line-height: 1.6; }
+.compliance-card { padding: 22px; display: grid; grid-template-columns: minmax(0,1fr) auto; gap: 20px; align-items: center; border-color: rgba(49,217,124,.22); }
+.compliance-card h2 { margin: 5px 0 8px; font-size: 22px; }
+.compliance-card p { margin: 0; color: #afc3d9; line-height: 1.8; }
+.compliance-links { min-width: 210px; display: grid; gap: 8px; }
+.compliance-links a { padding: 10px 12px; border-radius: 10px; border: 1px solid var(--line); background: rgba(255,255,255,.02); color: #cfe0ef; font-size: 13px; font-weight: 800; }
+.contact-strip { padding: 18px 20px; display: grid; grid-template-columns: auto 1fr; gap: 24px; align-items: center; }
+.contact-strip span { display: block; color: var(--muted); font-size: 12px; }
+.contact-strip strong { display: block; margin-top: 4px; font-size: 18px; color: #bfeaff; }
+.contact-strip p { margin: 0; color: var(--muted); font-size: 13px; line-height: 1.6; }
+.contact-box { margin: 18px 0 8px; padding: 17px 18px; border-radius: 15px; border: 1px solid rgba(35,199,255,.23); background: rgba(35,199,255,.055); }
+.contact-box span, .contact-box small { display: block; color: var(--muted); font-size: 12px; }
+.contact-box strong { display: block; margin: 5px 0; font-size: 20px; color: #bfeaff; overflow-wrap: anywhere; }
+
+.premium-product-price { margin: 12px auto 4px; color: var(--gold-2); font-size: 38px; line-height: 1; font-weight: 900; }
+.premium-product-price small { font-size: 12px; color: #c9b987; font-weight: 700; margin-left: 4px; }
+.delivery-note { margin: 16px 0 12px; padding: 13px 14px; text-align: left; border-radius: 12px; border: 1px solid rgba(244,196,78,.22); background: rgba(244,196,78,.055); }
+.delivery-note b { display: block; color: #f9dfa0; margin-bottom: 4px; font-size: 13px; }
+.delivery-note span { color: #cbbd96; font-size: 12px; line-height: 1.65; }
+.purchase-policy-links { margin-top: 12px; display: flex; justify-content: center; flex-wrap: wrap; gap: 8px 12px; }
+.purchase-policy-links a { color: #e4cb81; text-decoration: underline; text-underline-offset: 3px; font-size: 12px; }
+.payment-review-note { margin: 12px 0 0 !important; color: #b9c7d6 !important; }
+.service-boundary-note { margin: 8px 0 0 !important; padding-top: 10px; border-top: 1px solid rgba(244,196,78,.15); color: #aebdca !important; }
+
+@media (max-width: 820px) {
+  .merchant-summary, .premium-product-hero, .compliance-card, .contact-strip { grid-template-columns: 1fr; }
+  .merchant-summary-actions { width: 100%; }
+  .merchant-summary-actions .btn { flex: 1; text-align: center; }
+  .premium-price-card { min-height: 130px; }
+  .compliance-links { min-width: 0; grid-template-columns: repeat(2,minmax(0,1fr)); }
+}
+@media (max-width: 520px) {
+  .premium-hero { padding-top: 18px; }
+  .premium-product-hero { padding: 21px 17px; gap: 18px; }
+  .premium-price-card strong { font-size: 36px; }
+  .merchant-summary { padding: 17px; }
+  .merchant-summary-actions { display: grid; }
+  .compliance-links { grid-template-columns: 1fr; }
+  .contact-strip { gap: 10px; }
+  .premium-product-price { font-size: 34px; }
+}
