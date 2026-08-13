@@ -211,21 +211,15 @@
 
       status: old?.status || "upcoming",
 
-      // 一般與焦點賽事都公開的五欄內容。
+      // 所有場次都保存三個基本欄位；一般場三欄公開，焦點場只公開分析看法。
       preview: val("#fPreview"),
-      recent: val("#fRecent"),
-      matchup: val("#fMatchup"),
-      conditions: val("#fConditions"),
-      risk: val("#fRisk"),
-
-      // 一般場公開；焦點場由前台鎖在 K Premium 內。
       recommendationPrimary: val("#fPrimary"),
       prediction: val("#fPrediction"),
 
       premium,
       price: premium ? Number(val("#fPrice") || 39) : 0,
-      bp: premium ? val("#fBp") : "",
-      market: premium ? val("#fMarket") : "",
+      conditions: premium ? val("#fConditions") : "",
+      risk: premium ? val("#fRisk") : "",
       recommendationSecondary: premium ? val("#fSecondary") : "",
 
       result: old?.result || "",
@@ -265,14 +259,10 @@
       "#fBo":m.bo,
       "#fPrice":m.price || 39,
       "#fPreview":m.preview,
-      "#fRecent":m.recent,
-      "#fMatchup":m.matchup,
       "#fConditions":m.conditions,
       "#fRisk":m.risk || m.variance,
       "#fPrimary":m.recommendationPrimary,
       "#fPrediction":m.prediction,
-      "#fBp":m.bp,
-      "#fMarket":m.market,
       "#fSecondary":m.recommendationSecondary
     };
     Object.entries(map).forEach(([sel,v]) => { if ($(sel)) $(sel).value = v ?? ""; });

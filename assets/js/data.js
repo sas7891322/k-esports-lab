@@ -42,6 +42,7 @@ window.KEL_DEFAULT_MATCHES = [
     teamBLogo: "assets/img/teams/lck/hle.png",
     status: "upcoming",
     premium: true,
+    premiumUnlocked: false,
     price: 39,
     summary: "Legend Group 前段焦點戰。兩隊整體差距接近，適合作為 K Premium 焦點賽事。",
     preview: "GEN vs HLE 是本週最值得拆解的強強對話之一。兩隊整體實力接近，不能只靠排名或單一戰績判斷；這場更應該看中野主動權、下路線權、首輪大型物件，以及 BO3 內第二局開始的調整。",
@@ -51,9 +52,9 @@ window.KEL_DEFAULT_MATCHES = [
     risk: "強強對話的單局波動與 BP 博弈都較高，首局選角、前十五分鐘單點失誤與第二局開始的調整，都可能快速改變原始判斷。",
     bp: "K Premium 會進一步拆解首輪 Ban/Pick、中野優先權、下路組合與 Fearless Draft 下的英雄池延伸，並比較哪些選角最容易把前期線權轉成第一輪大型物件。",
     market: "預期比賽劇本會分成兩條：一方若在前十五分鐘建立物件與視野優勢，系列賽會朝穩定營運延伸；若首局長時間均勢，第二局開始的 BP 調整與團戰執行會成為主導因素。",
-    recommendationPrimary: "待 K Premium 完整研究完成後顯示",
+    recommendationPrimary: "GEN 系列賽小幅較優",
     recommendationSecondary: "首局中野主動權、下路線權與第一輪大型物件，是本系列賽最重要的三個關鍵勝負節點。",
-    prediction: "待解鎖"
+    prediction: "GEN 2：1 HLE"
   }
 ];
 
