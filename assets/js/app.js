@@ -17,7 +17,7 @@
       const res = await fetch("/api/matches", { headers: { "Accept": "application/json" } });
       if (!res.ok) throw new Error(`HTTP ${res.status}`);
       const data = await res.json();
-      if (Array.isArray(data.matches)) {
+      if (Array.isArray(data.matches) && data.matches.length) {
         cloudMatches = data.matches;
         return true;
       }
@@ -46,7 +46,6 @@
   }
 
   function todayISO() {
-    // 目前使用瀏覽器本地時區；正式後端上線後統一以 Asia/Taipei 處理。
     const d = new Date();
     const y = d.getFullYear();
     const m = String(d.getMonth() + 1).padStart(2, "0");
@@ -62,7 +61,9 @@
   }
 
   function premiumPill(m) {
-    return m.premium ? '<span class="pill gold">★ K PREMIUM</span>' : '<span class="pill green">一般分析</span>';
+    return m.premium
+      ? '<span class="pill gold">★ 焦點賽事・K PREMIUM</span>'
+      : '<span class="pill green">免費分析</span>';
   }
 
   function excerpt(value, max = 100) {
@@ -85,7 +86,7 @@
         </div>
         <div class="match-note">${escapeHtml(excerpt(m.preview || "", 110))}</div>
         <div class="card-actions">
-          <a class="btn ${m.premium ? "btn-gold" : "btn-primary"}" href="match.html?id=${encodeURIComponent(m.id)}">${m.premium ? `查看 K Premium｜NT$${m.price || 39}` : "查看賽事分析"}</a>
+          <a class="btn ${m.premium ? "btn-gold" : "btn-primary"}" href="match.html?id=${encodeURIComponent(m.id)}">${m.premium ? "查看焦點賽事" : "查看免費分析"}</a>
         </div>
       </article>`;
   }
@@ -95,7 +96,7 @@
       <a class="list-row" href="match.html?id=${encodeURIComponent(m.id)}">
         <span class="pill">${escapeHtml(m.league)}</span>
         <div><strong>${escapeHtml(m.teamAShort)} vs ${escapeHtml(m.teamBShort)}</strong><small>${fmtDate(m.date)}・${escapeHtml(m.time)}・${escapeHtml(m.bo)}</small></div>
-        ${m.premium ? '<span class="pill gold">PREMIUM</span>' : '<span class="pill green">免費</span>'}
+        ${m.premium ? '<span class="pill gold">焦點＋PREMIUM</span>' : '<span class="pill green">免費</span>'}
       </a>`;
   }
 
@@ -131,7 +132,7 @@
         const mark = logo
           ? `<div class="league-mark league-logo-mark"><img src="${logo}" alt="${escapeHtml(l)} 賽區 Logo" loading="lazy"></div>`
           : `<div class="league-mark">${escapeHtml(l.slice(0,3))}</div>`;
-        return `<a class="card league-card" href="league.html?league=${encodeURIComponent(l)}">${mark}<strong>${escapeHtml(l)}</strong><small>${lm.length} 場｜${p} 場 Premium</small></a>`;
+        return `<a class="card league-card" href="league.html?league=${encodeURIComponent(l)}">${mark}<strong>${escapeHtml(l)}</strong><small>${lm.length} 場｜${p} 場焦點</small></a>`;
       }).join("");
     }
   }
@@ -162,6 +163,14 @@
     return `<section class="card analysis-section"><h3>${title}</h3><p>${escapeHtml(content || "尚未填寫")}</p></section>`;
   }
 
+  function publicAnalysisHeader(m) {
+    return `<section class="card card-pad" style="border-color:rgba(35,199,255,.22);background:rgba(35,199,255,.035)">
+      <div class="eyebrow">免費公開分析</div>
+      <h3 style="margin:6px 0 6px">所有讀者都可閱讀</h3>
+      <p style="margin:0;color:var(--muted);font-size:13px;line-height:1.7">${m.premium ? "本場為焦點賽事；基本分析維持公開，K Premium 僅提供額外深度研究與最終預測。" : "本場為一般賽事，分析內容與最終賽事結論皆免費公開。"}</p>
+    </section>`;
+  }
+
   function renderMatch() {
     const root = document.querySelector("#matchRoot");
     if (!root) return;
@@ -186,22 +195,28 @@
 
       <div class="analysis-layout">
         <main class="analysis-main">
-          ${m.status === "finished" && m.result ? analysisSection("最終賽果", m.result) : ""}\n          ${analysisSection("分析看法", m.preview)}
+          ${m.status === "finished" && m.result ? analysisSection("最終賽果", m.result) : ""}
+          ${publicAnalysisHeader(m)}
+          ${analysisSection("分析看法", m.preview)}
+          ${analysisSection("近期對位", m.recent)}
+          ${analysisSection("關鍵對位", m.matchup)}
+          ${analysisSection("雙方勝負條件", m.conditions)}
+          ${analysisSection("不確定性提醒", m.risk || m.variance)}
 
           ${locked ? premiumLock(m) : `
-            ${analysisSection("賽事觀點", m.recommendationPrimary)}
+            ${analysisSection("賽事傾向", m.recommendationPrimary)}
             ${analysisSection("預測比分", m.prediction)}
           `}
         </main>
 
         <aside class="sticky-side">
           ${locked
-            ? `<div class="card score-box premium-score-locked"><span>賽事觀點・預測比分</span><strong>🔒 K Premium</strong></div>`
+            ? `<div class="card score-box premium-score-locked"><span>深度研究・最終預測</span><strong>🔒 K Premium</strong></div>`
             : `<div class="card score-box"><span>預測比分</span><strong>${escapeHtml(m.prediction || "-")}</strong></div>`}
           <div class="card card-pad">
             <div class="eyebrow">K Esports Lab</div>
             <h3 style="margin:6px 0 8px">分析原則</h3>
-            <p style="margin:0;color:var(--muted);font-size:13px;line-height:1.7">分析看法與賽事觀點著重比賽內容與判斷脈絡；所有預測內容皆不代表保證賽果。</p>
+            <p style="margin:0;color:var(--muted);font-size:13px;line-height:1.7">分析內容著重隊伍狀態、對位、版本與比賽脈絡；所有賽事預測皆為研究判斷，不代表保證賽果。</p>
           </div>
         </aside>
       </div>`;
@@ -213,28 +228,28 @@
     const price = m.price || 39;
     return `<section class="card premium-lock premium-product-box">
       <div class="lock-icon">🔒</div>
-      <div class="eyebrow" style="color:var(--gold)">K PREMIUM｜數位內容商品</div>
-      <h3>${escapeHtml(m.teamAShort)} vs ${escapeHtml(m.teamBShort)}｜精選深度分析</h3>
+      <div class="eyebrow" style="color:var(--gold)">K PREMIUM｜焦點賽事深度分析</div>
+      <h3>${escapeHtml(m.teamAShort)} vs ${escapeHtml(m.teamBShort)}｜進階研究內容</h3>
       <div class="premium-product-price">NT$${price}<small>／單篇數位文章</small></div>
-      <p>分析看法維持公開；購買後解鎖指定賽事的完整研究內容與最終結論。</p>
+      <p>上方五欄基本分析維持免費公開；解鎖後閱讀額外的深度研究與最終賽事預測。</p>
       <div class="premium-features">
-        <span>近期狀態</span>
-        <span>關鍵對位</span>
-        <span>版本與 BP</span>
-        <span>雙方勝負條件</span>
-        <span>不確定性提醒</span>
-        <span>賽事觀點與預測比分</span>
+        <span>BP／版本研究</span>
+        <span>預期比賽劇本</span>
+        <span>關鍵勝負節點</span>
+        <span>完整賽事傾向</span>
+        <span>最終賽事預測</span>
+        <span>預測比分</span>
       </div>
-      <div class="delivery-note"><b>商品交付方式</b><span>正式啟用後，付款成功並經系統確認，即解鎖本篇 K Premium 數位分析文章閱讀權限。</span></div>
-      <button class="btn btn-gold unlock-btn" data-price="${price}">NT$${price} 解鎖本篇 K Premium</button>
+      <div class="delivery-note"><b>商品交付方式</b><span>正式啟用後，付款成功並經系統確認，即解鎖本篇 K Premium 深度分析文章閱讀權限。</span></div>
+      <button class="btn btn-gold unlock-btn" data-price="${price}">NT$${price} 解鎖深度分析</button>
       <div class="purchase-policy-links"><a href="premium.html">商品說明</a><a href="digital-content.html">數位內容／退款說明</a><a href="terms.html">使用條款</a><a href="contact.html">客服聯絡</a></div>
       <p class="payment-review-note">目前金流收款功能申請／審核中，尚未開放實際付款，點擊按鈕不會產生任何扣款。</p>
-      <p class="service-boundary-note">本站僅販售數位分析內容，不接受投注、不代客下注、不收取下注資金、不提供派彩。</p>
+      <p class="service-boundary-note">本站提供電競賽事研究與數位分析內容，不接受投注、不代客下注、不收取下注資金、不提供派彩。</p>
     </section>`;
   }
 
   function bindUnlockButtons() {
-    document.querySelectorAll(".unlock-btn").forEach(btn => btn.addEventListener("click", () => openModal("K Premium 金流申請／審核中", `本篇商品售價為 NT$${btn.dataset.price || 39}。目前尚未開放實際付款，因此不會產生任何扣款；正式啟用後，付款成功將解鎖指定數位分析文章。`)));
+    document.querySelectorAll(".unlock-btn").forEach(btn => btn.addEventListener("click", () => openModal("K Premium 金流申請／審核中", `本篇深度分析售價為 NT$${btn.dataset.price || 39}。目前尚未開放實際付款，因此不會產生任何扣款；正式啟用後，付款成功將解鎖指定 K Premium 深度分析文章。`)));
   }
 
   function openModal(title, text) {
@@ -258,7 +273,7 @@
   }
 
   function escapeHtml(value) {
-    return String(value ?? "").replace(/[&<>'"]/g, ch => ({"&":"&amp;","<":"&lt;",">":"&gt;","'":"&#39;",'"':"&quot;"}[ch]));
+    return String(value ?? "").replace(/[&<>'\"]/g, ch => ({"&":"&amp;","<":"&lt;",">":"&gt;","'":"&#39;",'\"':"&quot;"}[ch]));
   }
 
   window.KEL = { getMatches, loadCloudMatches, saveMatches, resetMatches, openModal, matchCard, listRow, fmtDate, escapeHtml };

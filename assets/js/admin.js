@@ -85,7 +85,6 @@
     }
   }
 
-
   async function logout() {
     await api("/api/admin-logout", { method: "POST", body: "{}" }).catch(() => {});
     location.replace("admin-login.html");
@@ -140,7 +139,7 @@
       <div class="admin-item admin-match-item">
         <div class="admin-match-main">
           <strong>${window.KEL.escapeHtml(m.league)}｜${window.KEL.escapeHtml(m.teamAShort)} vs ${window.KEL.escapeHtml(m.teamBShort)}</strong>
-          <small>${window.KEL.fmtDate(m.date)} ${window.KEL.escapeHtml(m.time)}｜${m.premium ? "K Premium" : "一般分析"}｜${m.status === "finished" ? "已結束" : "未完賽"}</small>
+          <small>${window.KEL.fmtDate(m.date)} ${window.KEL.escapeHtml(m.time)}｜${m.premium ? "焦點賽事＋K Premium" : "免費分析"}｜${m.status === "finished" ? "已結束" : "未完賽"}</small>
         </div>
         <div class="admin-item-actions">
           <button class="btn btn-secondary" data-edit="${m.id}">編輯</button>
@@ -210,23 +209,25 @@
       teamBShort,
       teamBLogo: teamB?.logo || "",
 
-      // 狀態不再於新增表單手動維護；新賽事預設 upcoming。
       status: old?.status || "upcoming",
 
-      // 所有場次都固定填寫。
+      // 一般與焦點賽事都公開的五欄內容。
       preview: val("#fPreview"),
+      recent: val("#fRecent"),
+      matchup: val("#fMatchup"),
+      conditions: val("#fConditions"),
+      risk: val("#fRisk"),
+
+      // 一般場公開；焦點場由前台鎖在 K Premium 內。
       recommendationPrimary: val("#fPrimary"),
       prediction: val("#fPrediction"),
 
-      // K Premium 才使用的深度內容。
       premium,
       price: premium ? Number(val("#fPrice") || 39) : 0,
-      recent: premium ? val("#fRecent") : "",
-      matchup: premium ? val("#fMatchup") : "",
-      conditions: premium ? val("#fConditions") : "",
-      risk: premium ? val("#fRisk") : "",
+      bp: premium ? val("#fBp") : "",
+      market: premium ? val("#fMarket") : "",
+      recommendationSecondary: premium ? val("#fSecondary") : "",
 
-      // 保留既有完賽資料，之後移到獨立賽果管理介面。
       result: old?.result || "",
       resultHit: !!old?.resultHit
     };
@@ -267,9 +268,12 @@
       "#fRecent":m.recent,
       "#fMatchup":m.matchup,
       "#fConditions":m.conditions,
+      "#fRisk":m.risk || m.variance,
       "#fPrimary":m.recommendationPrimary,
       "#fPrediction":m.prediction,
-      "#fRisk":m.risk
+      "#fBp":m.bp,
+      "#fMarket":m.market,
+      "#fSecondary":m.recommendationSecondary
     };
     Object.entries(map).forEach(([sel,v]) => { if ($(sel)) $(sel).value = v ?? ""; });
     fillTeamSelects(m.teamAShort, m.teamBShort);
