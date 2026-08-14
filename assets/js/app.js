@@ -103,7 +103,18 @@
   function renderHome() {
     const matches = getMatches();
 
-    const featured = matches.filter(m => m.status !== "finished").sort((a,b) => (b.premium - a.premium) || a.date.localeCompare(b.date)).slice(0, 4);
+    const featured = matches
+      .filter(m => m.status !== "finished")
+      .sort((a, b) => {
+        const premiumOrder = Number(Boolean(b.premium)) - Number(Boolean(a.premium));
+        if (premiumOrder) return premiumOrder;
+
+        const dateOrder = String(a.date || "").localeCompare(String(b.date || ""));
+        if (dateOrder) return dateOrder;
+
+        return String(a.time || "").localeCompare(String(b.time || ""));
+      })
+      .slice(0, 4);
     const featuredEl = document.querySelector("#featuredList");
     if (featuredEl) featuredEl.innerHTML = featured.map(listRow).join("");
 
