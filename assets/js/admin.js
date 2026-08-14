@@ -159,14 +159,33 @@
   function trendHit(m, aScore, bScore) {
     const direction = m?.recommendationPrimary;
     if (!direction) return null;
+
+    const text = normalizeDirection(direction);
+    const scoreA = Number(aScore);
+    const scoreB = Number(bScore);
+    const totalGames = scoreA + scoreB;
+
+    // 網站版文字化賽事傾向：系列賽局數判定（不需要指定隊伍）。
+    if (text.includes("系列賽有望打滿三局") || text.includes("打滿三局") || text.includes("打滿3局")) return totalGames === 3;
+    if (text.includes("系列賽有望打滿五局") || text.includes("打滿五局") || text.includes("打滿5局")) return totalGames === 5;
+    if (text.includes("系列賽有望兩局內結束") || text.includes("兩局內結束") || text.includes("2局內結束")) return totalGames <= 2;
+    if (text.includes("系列賽有望三局內結束") || text.includes("三局內結束") || text.includes("3局內結束")) return totalGames <= 3;
+
     const side = directionTeamSide(m, direction);
     if (!side) return null;
 
-    const text = normalizeDirection(direction);
-    const teamScore = side === "A" ? Number(aScore) : Number(bScore);
-    const opponentScore = side === "A" ? Number(bScore) : Number(aScore);
-    const handicap = text.match(/([+-]\d+(?:\.\d+)?)/);
+    const teamScore = side === "A" ? scoreA : scoreB;
+    const opponentScore = side === "A" ? scoreB : scoreA;
 
+    // 新網站固定句型。
+    if (text.includes("至少可拿下一局") || text.includes("至少能拿下一局") || text.includes("至少拿下一局")) return teamScore >= 1;
+    if (text.includes("至少可拿下兩局") || text.includes("至少能拿下兩局") || text.includes("至少拿下兩局")) return teamScore >= 2;
+    if (text.includes("直落二取勝") || text.includes("直落2取勝") || text.includes("直落二勝出")) return teamScore === 2 && opponentScore === 0;
+    if (text.includes("至少兩局差取勝") || text.includes("至少2局差取勝") || text.includes("拉開局數差距取勝")) return teamScore > opponentScore && (teamScore - opponentScore) >= 2;
+    if (text.includes("系列賽勝出") || text.includes("系列賽獲勝")) return teamScore > opponentScore;
+
+    // 舊資料相容：既有紀錄仍能正確核對；新內容改用文字化賽事傾向。
+    const handicap = text.match(/([+-]\d+(?:\.\d+)?)/);
     if (handicap) return teamScore + Number(handicap[1]) > opponentScore;
     if (text.includes("勝") || text.includes("較優") || text.includes("看好") || text.includes("WIN") || text.includes("ML")) return teamScore > opponentScore;
     return null;
