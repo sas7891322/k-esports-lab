@@ -150,10 +150,11 @@
     return typeof m?.trendHit === "boolean" ? m.trendHit : null;
   }
 
-  function resultStatusIcon(hit) {
-    if (hit === true) return "✅";
-    if (hit === false) return "❌";
-    return "—";
+  function resultStatusMarkup(hit, label) {
+    const state = hit === true ? "hit" : hit === false ? "miss" : "unknown";
+    const icon = hit === true ? "✓" : hit === false ? "✕" : "—";
+    const text = hit === true ? "命中" : hit === false ? "未命中" : "待判定";
+    return `<span class="result-review-status ${state}" aria-label="${label}${text}"><span aria-hidden="true">${icon}</span>${text}</span>`;
   }
 
   function resultReviewMarkup(m, { compact = false } = {}) {
@@ -164,14 +165,18 @@
       <div class="prediction-review ${compact ? "compact" : ""} ${m.premium ? "premium-review" : ""}">
         ${compact ? "" : `<div class="prediction-review-head"><strong>賽前預測回顧</strong>${premiumTag}</div>`}
         <div class="prediction-review-line">
-          <span class="prediction-review-label">預測比分：</span>
-          <span>${escapeHtml(m.prediction || "-")}｜結果：${escapeHtml(m.result || "-")}</span>
-          <b aria-label="${scoreHit ? "預測比分命中" : "預測比分未命中"}">${resultStatusIcon(scoreHit)}</b>
+          <span class="prediction-review-label">預測比分</span>
+          <span class="prediction-review-main score-review-main">
+            <span class="prediction-review-value">${escapeHtml(m.prediction || "-")}</span>
+            <span class="result-review-arrow" aria-hidden="true">→</span>
+            <span class="prediction-review-result"><small>結果</small>${escapeHtml(m.result || "-")}</span>
+          </span>
+          ${resultStatusMarkup(scoreHit, "預測比分")}
         </div>
         <div class="prediction-review-line">
-          <span class="prediction-review-label">賽事傾向：</span>
-          <span>${escapeHtml(m.recommendationPrimary || "-")}｜結果：</span>
-          <b aria-label="${trendHit === true ? "賽事傾向命中" : trendHit === false ? "賽事傾向未命中" : "賽事傾向無法自動判定"}">${resultStatusIcon(trendHit)}</b>
+          <span class="prediction-review-label">賽事傾向</span>
+          <span class="prediction-review-main"><span class="prediction-review-value">${escapeHtml(m.recommendationPrimary || "-")}</span></span>
+          ${resultStatusMarkup(trendHit, "賽事傾向")}
         </div>
       </div>`;
   }
