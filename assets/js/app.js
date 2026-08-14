@@ -91,6 +91,19 @@
       </article>`;
   }
 
+  function extractScore(value) {
+    const normalized = String(value || "").trim().replace(/[：﹕]/g, ":");
+    const match = normalized.match(/(\d+)\s*:\s*(\d+)/);
+    return match ? [Number(match[1]), Number(match[2])] : null;
+  }
+
+  function resultHitForMatch(m) {
+    const predicted = extractScore(m?.prediction);
+    const actual = extractScore(m?.result);
+    if (predicted && actual) return predicted[0] === actual[0] && predicted[1] === actual[1];
+    return !!m?.resultHit;
+  }
+
   function listRow(m) {
     return `
       <a class="list-row" href="match.html?id=${encodeURIComponent(m.id)}">
@@ -120,11 +133,20 @@
 
     const results = matches.filter(m => m.status === "finished").sort((a,b) => b.date.localeCompare(a.date)).slice(0, 4);
     const resultEl = document.querySelector("#latestResults");
-    if (resultEl) resultEl.innerHTML = results.map(m => `
+    if (resultEl) resultEl.innerHTML = results.map(m => {
+      const hit = resultHitForMatch(m);
+      return `
       <div class="result-row">
-        <div><strong>${escapeHtml(m.teamAShort)} vs ${escapeHtml(m.teamBShort)}</strong><small>預測：${escapeHtml(m.prediction || "-")}｜結果：${escapeHtml(m.result || "-")}</small></div>
-        <div class="result-state">${m.resultHit ? "✅" : "❌"}</div>
-      </div>`).join("") || '<div class="empty">尚無完賽紀錄。</div>';
+        <div class="result-copy">
+          <strong>${escapeHtml(m.teamAShort)} vs ${escapeHtml(m.teamBShort)}</strong>
+          <div class="result-detail">
+            <span>預測：${escapeHtml(m.prediction || "-")}</span>
+            <span>結果：${escapeHtml(m.result || "-")}</span>
+          </div>
+        </div>
+        <div class="result-state" aria-label="${hit ? "預測比分命中" : "預測比分未命中"}">${hit ? "✅" : "❌"}</div>
+      </div>`;
+    }).join("") || '<div class="empty">尚無完賽紀錄。</div>';
 
     const leaguesEl = document.querySelector("#leagueGrid");
     if (leaguesEl) {

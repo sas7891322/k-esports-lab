@@ -116,15 +116,22 @@
     if (fields) fields.hidden = !premium;
   }
 
-  function normalizeScore(value) {
-    return String(value || "").trim().replace(/[：﹕]/g, ":").replace(/\s+/g, "");
+  function extractScore(value) {
+    const normalized = String(value || "").trim().replace(/[：﹕]/g, ":");
+    const match = normalized.match(/(\d+)\s*:\s*(\d+)/);
+    return match ? [Number(match[1]), Number(match[2])] : null;
   }
 
   function predictionHit(prediction, aScore, bScore) {
-    const normalized = normalizeScore(prediction);
-    const match = normalized.match(/(\d+):(\d+)$/);
-    if (!match) return false;
-    return Number(match[1]) === Number(aScore) && Number(match[2]) === Number(bScore);
+    const score = extractScore(prediction);
+    if (!score) return false;
+    return score[0] === Number(aScore) && score[1] === Number(bScore);
+  }
+
+  function resultHitForMatch(m) {
+    const actual = extractScore(m?.result);
+    if (!actual) return !!m?.resultHit;
+    return predictionHit(m?.prediction, actual[0], actual[1]);
   }
 
   function renderResultManager(m) {
@@ -132,7 +139,7 @@
       return `<div class="admin-result-finished">
         <span class="result-badge">已完賽</span>
         <strong>${window.KEL.escapeHtml(m.result || "-")}</strong>
-        ${m.resultHit ? '<span class="result-hit">✓ 比分命中</span>' : '<span class="result-miss">比分未命中</span>'}
+        ${resultHitForMatch(m) ? '<span class="result-hit">✓ 比分命中</span>' : '<span class="result-miss">比分未命中</span>'}
         <button class="btn btn-secondary btn-small" data-reopen="${m.id}">重新開啟</button>
       </div>`;
     }
