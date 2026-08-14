@@ -116,10 +116,13 @@ h1 { margin: 8px 0 8px; font-size: clamp(30px, 5vw, 54px); line-height: 1.08; }
 .list-row strong { font-size: 14px; }
 .list-row small { color: var(--muted); display: block; margin-top: 3px; }
 
-.result-row { display: grid; grid-template-columns: 1fr auto; gap: 14px; align-items: center; padding: 13px 0; border-bottom: 1px solid rgba(255,255,255,.06); }
+.result-row { display: grid; grid-template-columns: minmax(0,1fr) auto; gap: 14px; align-items: center; padding: 14px 0; border-bottom: 1px solid rgba(255,255,255,.06); }
 .result-row:last-child { border-bottom: 0; }
-.result-row small { color: var(--muted); }
-.result-state { font-size: 20px; }
+.result-copy { min-width: 0; }
+.result-copy strong { display: block; margin-bottom: 6px; font-size: 16px; line-height: 1.35; }
+.result-detail { display: grid; gap: 3px; }
+.result-detail span { color: var(--muted); font-size: 13px; line-height: 1.5; overflow-wrap: anywhere; }
+.result-state { font-size: 24px; line-height: 1; }
 
 .page-head { padding: 28px 0 14px; }
 .page-head h1 { font-size: 34px; margin: 0 0 6px; }
