@@ -134,12 +134,66 @@
     return predictionHit(m?.prediction, actual[0], actual[1]);
   }
 
+  function normalizeDirection(value) {
+    return String(value || "")
+      .toUpperCase()
+      .replace(/[＋﹢]/g, "+")
+      .replace(/[－−﹣]/g, "-")
+      .replace(/[：﹕]/g, ":")
+      .replace(/\s+/g, "");
+  }
+
+  function directionTeamSide(m, direction) {
+    const text = normalizeDirection(direction);
+    const candidates = [
+      ["A", m?.teamAShort, m?.teamA],
+      ["B", m?.teamBShort, m?.teamB]
+    ];
+    for (const [side, short, name] of candidates) {
+      const keys = [short, name].map(normalizeDirection).filter(Boolean);
+      if (keys.some(key => text.includes(key))) return side;
+    }
+    return null;
+  }
+
+  function trendHit(m, aScore, bScore) {
+    const direction = m?.recommendationPrimary;
+    if (!direction) return null;
+    const side = directionTeamSide(m, direction);
+    if (!side) return null;
+
+    const text = normalizeDirection(direction);
+    const teamScore = side === "A" ? Number(aScore) : Number(bScore);
+    const opponentScore = side === "A" ? Number(bScore) : Number(aScore);
+    const handicap = text.match(/([+-]\d+(?:\.\d+)?)/);
+
+    if (handicap) return teamScore + Number(handicap[1]) > opponentScore;
+    if (text.includes("勝") || text.includes("較優") || text.includes("看好") || text.includes("WIN") || text.includes("ML")) return teamScore > opponentScore;
+    return null;
+  }
+
+  function trendHitForMatch(m) {
+    const actual = extractScore(m?.result);
+    if (!actual) return typeof m?.trendHit === "boolean" ? m.trendHit : null;
+    const calculated = trendHit(m, actual[0], actual[1]);
+    return calculated === null ? (typeof m?.trendHit === "boolean" ? m.trendHit : null) : calculated;
+  }
+
+  function resultIcon(value) {
+    if (value === true) return "✓";
+    if (value === false) return "✕";
+    return "—";
+  }
+
   function renderResultManager(m) {
     if (m.status === "finished") {
+      const scoreHit = resultHitForMatch(m);
+      const trendResult = trendHitForMatch(m);
       return `<div class="admin-result-finished">
         <span class="result-badge">已完賽</span>
         <strong>${window.KEL.escapeHtml(m.result || "-")}</strong>
-        ${resultHitForMatch(m) ? '<span class="result-hit">✓ 比分命中</span>' : '<span class="result-miss">比分未命中</span>'}
+        <span class="${scoreHit ? "result-hit" : "result-miss"}">${resultIcon(scoreHit)} 比分${scoreHit ? "命中" : "未命中"}</span>
+        <span class="${trendResult === true ? "result-hit" : "result-miss"}">${resultIcon(trendResult)} 傾向${trendResult === true ? "命中" : trendResult === false ? "未命中" : "待確認"}</span>
         <button class="btn btn-secondary btn-small" data-reopen="${m.id}">重新開啟</button>
       </div>`;
     }
@@ -189,20 +243,24 @@
     if (aScore === bScore) {
       window.KEL.openModal("比分不正確", "系列賽最終比分不能平手。"); return;
     }
+    const scoreHit = predictionHit(m.prediction, aScore, bScore);
+    const directionHit = trendHit(m, aScore, bScore);
     const updated = {...m,
       status:"finished",
       result:`${m.teamAShort} ${aScore}：${bScore} ${m.teamBShort}`,
-      resultHit:predictionHit(m.prediction, aScore, bScore)
+      resultHit:scoreHit,
+      trendHit:directionHit
     };
     await api("/api/admin-matches", {method:"POST", body:JSON.stringify(updated)});
     await loadAdminMatches();
-    window.KEL.openModal("已確認完賽", updated.resultHit ? `最終比分 ${updated.result}，預測比分完全命中。` : `最終比分 ${updated.result}，賽事已移入完賽紀錄。`);
+    const trendText = directionHit === true ? "賽事傾向命中" : directionHit === false ? "賽事傾向未命中" : "賽事傾向請人工確認";
+    window.KEL.openModal("已確認完賽", `最終比分 ${updated.result}；預測比分${scoreHit ? "命中" : "未命中"}，${trendText}。`);
   }
 
   async function reopenMatch(id) {
     const m = adminMatches.find(x => x.id === id);
     if (!m || !confirm("確定要把這場賽事恢復成未完賽嗎？")) return;
-    const updated = {...m, status:"upcoming", result:"", resultHit:false};
+    const updated = {...m, status:"upcoming", result:"", resultHit:false, trendHit:null};
     await api("/api/admin-matches", {method:"POST", body:JSON.stringify(updated)});
     await loadAdminMatches();
   }
@@ -244,7 +302,8 @@
       recommendationSecondary: premium ? val("#fSecondary") : "",
 
       result: old?.result || "",
-      resultHit: !!old?.resultHit
+      resultHit: !!old?.resultHit,
+      trendHit: typeof old?.trendHit === "boolean" ? old.trendHit : null
     };
   }
 
@@ -296,7 +355,7 @@
 
   async function duplicateMatch(id) {
     const m = adminMatches.find(x => x.id === id); if (!m) return;
-    const copy = {...m, id: `${m.id}-copy-${Date.now().toString().slice(-5)}`, status:"upcoming", result:"", resultHit:false};
+    const copy = {...m, id: `${m.id}-copy-${Date.now().toString().slice(-5)}`, status:"upcoming", result:"", resultHit:false, trendHit:null};
     await api("/api/admin-matches", { method:"POST", body:JSON.stringify(copy) });
     await loadAdminMatches();
   }

@@ -104,6 +104,78 @@
     return !!m?.resultHit;
   }
 
+  function normalizeDirection(value) {
+    return String(value || "")
+      .toUpperCase()
+      .replace(/[＋﹢]/g, "+")
+      .replace(/[－−﹣]/g, "-")
+      .replace(/[：﹕]/g, ":")
+      .replace(/\s+/g, "");
+  }
+
+  function directionTeamSide(m, direction) {
+    const text = normalizeDirection(direction);
+    const candidates = [
+      ["A", m?.teamAShort, m?.teamA],
+      ["B", m?.teamBShort, m?.teamB]
+    ];
+    for (const [side, short, name] of candidates) {
+      const keys = [short, name].map(normalizeDirection).filter(Boolean);
+      if (keys.some(key => text.includes(key))) return side;
+    }
+    return null;
+  }
+
+  function trendHitForMatch(m) {
+    const actual = extractScore(m?.result);
+    const direction = m?.recommendationPrimary;
+    if (!actual || !direction) return typeof m?.trendHit === "boolean" ? m.trendHit : null;
+
+    const side = directionTeamSide(m, direction);
+    if (!side) return typeof m?.trendHit === "boolean" ? m.trendHit : null;
+
+    const text = normalizeDirection(direction);
+    const teamScore = side === "A" ? actual[0] : actual[1];
+    const opponentScore = side === "A" ? actual[1] : actual[0];
+    const handicap = text.match(/([+-]\d+(?:\.\d+)?)/);
+
+    if (handicap) {
+      return teamScore + Number(handicap[1]) > opponentScore;
+    }
+
+    if (text.includes("勝") || text.includes("較優") || text.includes("看好") || text.includes("WIN") || text.includes("ML")) {
+      return teamScore > opponentScore;
+    }
+
+    return typeof m?.trendHit === "boolean" ? m.trendHit : null;
+  }
+
+  function resultStatusIcon(hit) {
+    if (hit === true) return "✅";
+    if (hit === false) return "❌";
+    return "—";
+  }
+
+  function resultReviewMarkup(m, { compact = false } = {}) {
+    const scoreHit = resultHitForMatch(m);
+    const trendHit = trendHitForMatch(m);
+    const premiumTag = m.premium ? '<span class="pill gold result-premium-pill">⭐ 焦點賽事</span>' : "";
+    return `
+      <div class="prediction-review ${compact ? "compact" : ""} ${m.premium ? "premium-review" : ""}">
+        ${compact ? "" : `<div class="prediction-review-head"><strong>賽前預測回顧</strong>${premiumTag}</div>`}
+        <div class="prediction-review-line">
+          <span class="prediction-review-label">預測比分：</span>
+          <span>${escapeHtml(m.prediction || "-")}｜結果：${escapeHtml(m.result || "-")}</span>
+          <b aria-label="${scoreHit ? "預測比分命中" : "預測比分未命中"}">${resultStatusIcon(scoreHit)}</b>
+        </div>
+        <div class="prediction-review-line">
+          <span class="prediction-review-label">賽事傾向：</span>
+          <span>${escapeHtml(m.recommendationPrimary || "-")}｜結果：</span>
+          <b aria-label="${trendHit === true ? "賽事傾向命中" : trendHit === false ? "賽事傾向未命中" : "賽事傾向無法自動判定"}">${resultStatusIcon(trendHit)}</b>
+        </div>
+      </div>`;
+  }
+
   function listRow(m) {
     return `
       <a class="list-row" href="match.html?id=${encodeURIComponent(m.id)}">
@@ -131,22 +203,25 @@
     const featuredEl = document.querySelector("#featuredList");
     if (featuredEl) featuredEl.innerHTML = featured.map(listRow).join("");
 
-    const results = matches.filter(m => m.status === "finished").sort((a,b) => b.date.localeCompare(a.date)).slice(0, 4);
+    const results = matches
+      .filter(m => m.status === "finished")
+      .sort((a,b) => {
+        const dateOrder = String(b.date || "").localeCompare(String(a.date || ""));
+        if (dateOrder) return dateOrder;
+        return String(b.time || "").localeCompare(String(a.time || ""));
+      })
+      .slice(0, 4);
     const resultEl = document.querySelector("#latestResults");
-    if (resultEl) resultEl.innerHTML = results.map(m => {
-      const hit = resultHitForMatch(m);
-      return `
-      <div class="result-row">
+    if (resultEl) resultEl.innerHTML = results.map(m => `
+      <div class="result-row ${m.premium ? "premium-result-row" : ""}">
         <div class="result-copy">
-          <strong>${escapeHtml(m.teamAShort)} vs ${escapeHtml(m.teamBShort)}</strong>
-          <div class="result-detail">
-            <span>預測：${escapeHtml(m.prediction || "-")}</span>
-            <span>結果：${escapeHtml(m.result || "-")}</span>
+          <div class="result-title-line">
+            <strong>${escapeHtml(m.teamAShort)} vs ${escapeHtml(m.teamBShort)}</strong>
+            ${m.premium ? '<span class="pill gold result-premium-pill">⭐ 焦點賽事</span>' : ""}
           </div>
+          ${resultReviewMarkup(m, { compact: true })}
         </div>
-        <div class="result-state" aria-label="${hit ? "預測比分命中" : "預測比分未命中"}">${hit ? "✅" : "❌"}</div>
-      </div>`;
-    }).join("") || '<div class="empty">尚無完賽紀錄。</div>';
+      </div>`).join("") || '<div class="empty">尚無完賽紀錄。</div>';
 
     const leaguesEl = document.querySelector("#leagueGrid");
     if (leaguesEl) {
@@ -230,7 +305,7 @@
           ${!m.premium ? `
             ${analysisSection("賽事傾向", m.recommendationPrimary)}
             ${analysisSection("預測比分", m.prediction)}
-          ` : locked ? premiumLock(m) : premiumContent(m)}
+          ` : m.status === "finished" && locked ? premiumFinishedReview(m) : locked ? premiumLock(m) : premiumContent(m)}
         </main>
 
         <aside class="sticky-side">
@@ -243,6 +318,16 @@
       </div>`;
 
     bindUnlockButtons();
+  }
+
+  function premiumFinishedReview(m) {
+    return `
+      <section class="card premium-finished-review">
+        <div class="eyebrow" style="color:var(--gold)">K PREMIUM｜完賽回顧</div>
+        <h3>賽前預測紀錄已公開</h3>
+        <p>賽事結束後公開預測比分與賽事傾向供結果核對；雙方勝負條件、不確定性提醒與關鍵勝負節點仍維持深度內容。</p>
+        ${resultReviewMarkup(m)}
+      </section>`;
   }
 
   function premiumContent(m) {
@@ -271,8 +356,8 @@
         <span>雙方勝負條件</span>
         <span>不確定性提醒</span>
         <span>關鍵勝負節點</span>
-        <span>賽事傾向</span>
-        <span>預測比分</span>
+        <span>賽事傾向：</span>
+        <span>預測比分：</span>
       </div>
       <div class="delivery-note"><b>商品交付方式</b><span>正式啟用後，付款成功並經系統確認，即解鎖本篇 K Premium 焦點賽事完整分析閱讀權限。</span></div>
       <button class="btn btn-gold unlock-btn" data-price="${price}">NT$${price} 解鎖完整分析</button>
