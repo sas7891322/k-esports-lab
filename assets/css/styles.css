@@ -681,3 +681,17 @@ h1 { margin: 8px 0 8px; font-size: clamp(30px, 5vw, 54px); line-height: 1.08; }
   .contact-strip { gap: 10px; }
   .premium-product-price { font-size: 34px; }
 }
+
+/* Admin session + match time controls */
+.time-select-group {
+  display: grid;
+  grid-template-columns: minmax(0,1fr) auto minmax(0,1fr);
+  gap: 8px;
+  align-items: center;
+}
+.time-select-group .select { min-width: 0; }
+.time-separator {
+  color: var(--muted);
+  font-weight: 800;
+  text-align: center;
+}
