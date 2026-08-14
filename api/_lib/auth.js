@@ -1,6 +1,7 @@
 import crypto from "node:crypto";
 
 const COOKIE = "kel_admin_session";
+const SESSION_VERSION = "v2";
 
 function secret() {
   return process.env.SESSION_SECRET || "";
@@ -25,10 +26,10 @@ export function validPassword(password) {
 }
 
 export function makeSessionCookie() {
-  const expires = Date.now() + 1000 * 60 * 60 * 24 * 7;
-  const payload = String(expires);
+  const expires = Date.now() + 1000 * 60 * 60 * 24;
+  const payload = `${SESSION_VERSION}:${expires}`;
   const token = `${payload}.${sign(payload)}`;
-  return `${COOKIE}=${token}; Path=/; HttpOnly; Secure; SameSite=Strict; Max-Age=604800`;
+  return `${COOKIE}=${token}; Path=/; HttpOnly; Secure; SameSite=Strict; Max-Age=86400`;
 }
 
 export function clearSessionCookie() {
@@ -41,7 +42,9 @@ export function isAdmin(req) {
   const pair = cookie.split(";").map(v => v.trim()).find(v => v.startsWith(`${COOKIE}=`));
   if (!pair) return false;
   const token = pair.slice(COOKIE.length + 1);
-  const [expires, signature] = token.split(".");
-  if (!expires || !signature || Number(expires) < Date.now()) return false;
-  return safeEqual(signature, sign(expires));
+  const [payload, signature] = token.split(".");
+  if (!payload || !signature || !payload.startsWith(`${SESSION_VERSION}:`)) return false;
+  const expires = payload.slice(SESSION_VERSION.length + 1);
+  if (!expires || Number(expires) < Date.now()) return false;
+  return safeEqual(signature, sign(payload));
 }
