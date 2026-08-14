@@ -588,17 +588,19 @@ h1 { margin: 8px 0 8px; font-size: clamp(30px, 5vw, 54px); line-height: 1.08; }
 
 /* v2.1 K Premium merchant review / product sales page */
 .merchant-summary {
-  padding: 20px 22px;
+  padding: 16px 18px;
   display: grid;
   grid-template-columns: minmax(0,1fr) auto;
-  gap: 20px;
+  gap: 14px;
   align-items: center;
   border-color: rgba(244,196,78,.34);
   background: linear-gradient(135deg, rgba(65,49,14,.26), rgba(10,25,44,.96) 48%);
 }
-.merchant-summary h2 { margin: 5px 0 8px; font-size: 22px; }
-.merchant-summary p { margin: 0; max-width: 760px; color: #afc3d9; line-height: 1.75; }
-.merchant-summary-actions { display: flex; flex-wrap: wrap; gap: 9px; }
+.merchant-summary h2 { margin: 4px 0 6px; font-size: 18px; line-height: 1.35; }
+.merchant-summary p { margin: 0; max-width: 760px; color: #afc3d9; line-height: 1.6; font-size: 14px; }
+.merchant-summary-note { margin-top: 6px !important; color: #94abc3 !important; font-size: 12px !important; line-height: 1.55 !important; }
+.merchant-summary-actions { display: flex; flex-wrap: wrap; gap: 8px; align-self: stretch; }
+.merchant-summary-actions .btn { min-height: 44px; padding: 10px 14px; font-size: 14px; }
 
 .premium-hero { padding: 36px 0 8px; }
 .premium-product-hero {
@@ -675,8 +677,11 @@ h1 { margin: 8px 0 8px; font-size: clamp(30px, 5vw, 54px); line-height: 1.08; }
   .premium-hero { padding-top: 18px; }
   .premium-product-hero { padding: 21px 17px; gap: 18px; }
   .premium-price-card strong { font-size: 36px; }
-  .merchant-summary { padding: 17px; }
+  .merchant-summary { padding: 15px; gap: 12px; }
+  .merchant-summary h2 { font-size: 16px; }
+  .merchant-summary p { font-size: 13px; }
   .merchant-summary-actions { display: grid; }
+  .merchant-summary-actions .btn { min-height: 40px; padding: 9px 12px; font-size: 13px; }
   .compliance-links { grid-template-columns: 1fr; }
   .contact-strip { gap: 10px; }
   .premium-product-price { font-size: 34px; }
