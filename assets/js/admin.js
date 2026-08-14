@@ -7,6 +7,20 @@
   function val(id) { return $(id)?.value?.trim() || ""; }
   function checked(id) { return !!$(id)?.checked; }
 
+  function selectedTime() {
+    const hour = val("#fTimeHour");
+    const minute = val("#fTimeMinute") || "00";
+    return hour ? `${hour}:${minute}` : "";
+  }
+
+  function setTimeControls(time) {
+    const match = String(time || "").match(/^(\d{1,2}):(\d{2})/);
+    const hour = match ? String(Number(match[1])).padStart(2, "0") : "";
+    const minute = match && match[2] === "30" ? "30" : "00";
+    if ($("#fTimeHour")) $("#fTimeHour").value = hour;
+    if ($("#fTimeMinute")) $("#fTimeMinute").value = minute;
+  }
+
   async function api(url, options = {}) {
     const res = await fetch(url, {
       ...options,
@@ -200,7 +214,7 @@
       id,
       league: val("#fLeague") || "LCK",
       date,
-      time: val("#fTime"),
+      time: selectedTime(),
       bo: val("#fBo") || "BO3",
       teamA: teamA?.name || "",
       teamAShort,
@@ -255,7 +269,6 @@
     const map = {
       "#fLeague":m.league,
       "#fDate":m.date,
-      "#fTime":m.time,
       "#fBo":m.bo,
       "#fPrice":m.price || 39,
       "#fPreview":m.preview,
@@ -266,6 +279,7 @@
       "#fSecondary":m.recommendationSecondary
     };
     Object.entries(map).forEach(([sel,v]) => { if ($(sel)) $(sel).value = v ?? ""; });
+    setTimeControls(m.time);
     fillTeamSelects(m.teamAShort, m.teamBShort);
     $("#fPremium").checked = !!m.premium;
     updatePremiumFields();
@@ -290,6 +304,7 @@
     editId = null;
     $("#matchForm")?.reset();
     if ($("#fPrice")) $("#fPrice").value = 39;
+    setTimeControls("");
     if ($("#formTitle")) $("#formTitle").textContent = "新增賽事";
     updatePremiumFields();
     fillTeamSelects();
