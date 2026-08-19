@@ -63,10 +63,10 @@
     const button = actions.querySelector("[data-stage-unlock]");
     if (button) { button.disabled = true; button.textContent = "建立 STAGE 測試解鎖中…"; }
     try {
-      const res = await fetch("/api/ecpay/stage-unlock", {
+      const res = await fetch("/api/order-status", {
         method: "POST",
         headers: { "Content-Type": "application/json", "Accept": "application/json" },
-        body: JSON.stringify({ order, token })
+        body: JSON.stringify({ action: "stage_unlock", order, token })
       });
       const data = await res.json();
       if (!res.ok) throw new Error(data.error || `HTTP_${res.status}`);

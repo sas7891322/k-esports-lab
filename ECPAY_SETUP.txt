@@ -19,7 +19,7 @@ K Esports Lab｜綠界付款串接設定（正式母版 v2.4 Production Ready）
 因此 v2.4：
 - STAGE／Production 收到 SimulatePaid=1 都「不會」把訂單標記為 paid。
 - STAGE 在確認 ReturnURL 模擬通知成功後，付款狀態頁才會出現「完成 STAGE 測試解鎖」按鈕，用網站自己的 stage-only endpoint 模擬交付流程。
-- /api/ecpay/stage-unlock 在 Production 會直接不可用。
+- /api/order-status 的 STAGE 解鎖 POST 動作在 Production 會直接不可用。
 - Production 只接受 CheckMacValue 正確、MerchantID 正確、金額正確、環境正確、RtnCode=1 且非 SimulatePaid 的通知解鎖。
 
 三、付款環境改為「必須明確設定」
