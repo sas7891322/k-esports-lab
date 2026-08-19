@@ -1,4 +1,4 @@
-K Esports Lab｜綠界付款串接設定（v2.2）
+K Esports Lab｜綠界付款串接設定（正式母版 v2.3）
 
 一、目前版本已完成
 - 綠界全方位金流 AioCheckOut/V5 導轉

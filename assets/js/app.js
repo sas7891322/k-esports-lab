@@ -86,7 +86,7 @@
         </div>
         <div class="match-note">${escapeHtml(excerpt(m.preview || "", 110))}</div>
         <div class="card-actions">
-          <a class="btn ${m.premium ? "btn-gold" : "btn-primary"}" href="match.html?id=${encodeURIComponent(m.id)}">${m.premium ? `查看 K Premium｜NT$${m.price || 39}` : "查看賽事分析"}</a>
+          <a class="btn ${m.premium && m.status !== "finished" ? "btn-gold" : "btn-primary"}" href="match.html?id=${encodeURIComponent(m.id)}">${m.status === "finished" ? "查看賽後紀錄" : (m.premium ? `查看 K Premium｜NT$${m.price || 39}` : "查看賽事分析")}</a>
         </div>
       </article>`;
   }
@@ -198,15 +198,56 @@
     }
   }
 
+
   function premiumContentSections(content) {
     return [
-      analysisSection("賽事傾向", content.recommendationPrimary),
+      analysisSection("賽事觀點", content.recommendationPrimary),
       analysisSection("預測比分", content.prediction),
       analysisSection("雙方勝負條件", content.conditions),
       analysisSection("不確定性提醒", content.risk),
       analysisSection("關鍵勝負節點", content.keyPoint)
     ].join("");
   }
+
+  function hitState(value, yesText = "符合", noText = "未符合") {
+    if (value === true) return `<span class="audit-hit">✅ ${yesText}</span>`;
+    if (value === false) return `<span class="audit-miss">❌ ${noText}</span>`;
+    return `<span class="audit-pending">— 尚未標記</span>`;
+  }
+
+  function resultAuditCard(m) {
+    if (m.status !== "finished") return "";
+    return `<section class="card result-audit-card">
+      <div class="result-audit-head">
+        <div><div class="eyebrow">賽後公開紀錄</div><h3>賽前判斷與實際結果</h3></div>
+        <span class="pill green">已完賽</span>
+      </div>
+      <div class="result-audit-grid">
+        <div class="result-audit-item">
+          <span>預測比分</span>
+          <strong>${escapeHtml(m.prediction || "-")}</strong>
+          <small>結果：${escapeHtml(m.result || "-")} ${m.resultHit ? '<b class="audit-hit">✅</b>' : '<b class="audit-miss">❌</b>'}</small>
+        </div>
+        <div class="result-audit-item">
+          <span>賽事觀點</span>
+          <strong>${escapeHtml(m.recommendationPrimary || "-")}</strong>
+          <small>結果：${hitState(m.trendHit)}</small>
+        </div>
+      </div>
+    </section>`;
+  }
+
+  function premiumArchiveNotice() {
+    return `<section class="card premium-archive-note">
+      <div class="premium-archive-icon">★</div>
+      <div>
+        <div class="eyebrow" style="color:var(--gold)">K PREMIUM｜賽後公開</div>
+        <h3>本場已結束，停止新購買</h3>
+        <p>賽前的賽事觀點、預測比分與實際結果已公開；深度內容不再對新使用者販售。既有購買者仍可使用原解鎖憑證閱讀。</p>
+      </div>
+    </section>`;
+  }
+
 
   async function renderMatch() {
     const root = document.querySelector("#matchRoot");
@@ -219,8 +260,9 @@
 
     if (m.premium) capturePurchaseFromQuery(m.id);
     const unlockedContent = m.premium ? await getUnlockedContent(m.id) : null;
-    const locked = !!m.premium && !unlockedContent;
+    const locked = !!m.premium && !unlockedContent && m.status !== "finished";
     const displayedPrediction = unlockedContent?.prediction || m.prediction || "-";
+    const sideScore = m.status === "finished" ? (m.result || "-") : displayedPrediction;
 
     root.innerHTML = `
       <div class="page-head">
@@ -237,22 +279,26 @@
 
       <div class="analysis-layout">
         <main class="analysis-main">
-          ${m.status === "finished" && m.result ? analysisSection("最終賽果", m.result) : ""}
           ${analysisSection("分析看法", m.preview)}
+          ${resultAuditCard(m)}
 
           ${m.premium
-            ? (unlockedContent ? premiumContentSections(unlockedContent) : premiumLock(m))
-            : `${analysisSection("賽事傾向", m.recommendationPrimary)}${analysisSection("預測比分", m.prediction)}`}
+            ? (unlockedContent
+                ? premiumContentSections(unlockedContent)
+                : (m.status === "finished" ? premiumArchiveNotice() : premiumLock(m)))
+            : (m.status === "finished"
+                ? ""
+                : `${analysisSection("賽事觀點", m.recommendationPrimary)}${analysisSection("預測比分", m.prediction)}`)}
         </main>
 
         <aside class="sticky-side">
           ${locked
-            ? `<div class="card score-box premium-score-locked"><span>賽事傾向・預測比分</span><strong>🔒 K Premium</strong></div>`
-            : `<div class="card score-box"><span>預測比分</span><strong>${escapeHtml(displayedPrediction)}</strong></div>`}
+            ? `<div class="card score-box premium-score-locked"><span>賽事觀點・預測比分</span><strong>🔒 K Premium</strong></div>`
+            : `<div class="card score-box"><span>${m.status === "finished" ? "最終賽果" : "預測比分"}</span><strong>${escapeHtml(sideScore)}</strong></div>`}
           <div class="card card-pad">
             <div class="eyebrow">K Esports Lab</div>
             <h3 style="margin:6px 0 8px">分析原則</h3>
-            <p style="margin:0;color:var(--muted);font-size:13px;line-height:1.7">分析看法與賽事傾向著重比賽內容與判斷脈絡；所有預測內容皆不代表保證賽果。</p>
+            <p style="margin:0;color:var(--muted);font-size:13px;line-height:1.7">分析看法與賽事觀點著重比賽內容與判斷脈絡；所有預測內容皆不代表保證賽果。</p>
           </div>
         </aside>
       </div>`;
@@ -261,30 +307,39 @@
     refreshPaymentModeUI();
   }
 
+
+
   function premiumLock(m) {
     const price = m.price || 39;
-    const finished = m.status === "finished";
-    return `<section class="card premium-lock premium-product-box">
-      <div class="lock-icon">🔒</div>
-      <div class="eyebrow" style="color:var(--gold)">K PREMIUM｜數位內容商品</div>
-      <h3>${escapeHtml(m.teamAShort)} vs ${escapeHtml(m.teamBShort)}｜精選深度分析</h3>
-      <div class="premium-product-price">NT$${price}<small>／單篇數位文章</small></div>
-      <p>分析看法維持公開；購買後解鎖指定賽事的完整研究內容與最終結論。</p>
-      <div class="premium-features">
-        <span>賽事傾向</span><span>預測比分</span><span>雙方勝負條件</span><span>不確定性提醒</span><span>關鍵勝負節點</span>
+    return `<section class="card premium-lock premium-product-box premium-lock-compact">
+      <div class="premium-lock-top">
+        <div class="premium-lock-copy">
+          <div class="premium-lock-kicker"><span aria-hidden="true">🔒</span> K PREMIUM｜數位內容商品</div>
+          <h3>${escapeHtml(m.teamAShort)} vs ${escapeHtml(m.teamBShort)}｜精選深度分析</h3>
+          <p>分析看法維持公開；解鎖後閱讀完整結論與深度分析。</p>
+        </div>
+        <div class="premium-compact-price"><span>單篇</span><strong>NT$${price}</strong></div>
       </div>
-      <div class="delivery-note"><b>商品交付方式</b><span>付款完成並經綠界回傳交易成功後，系統自動解鎖本篇 K Premium 數位分析文章閱讀權限。</span></div>
-      ${finished ? `<div class="payment-closed-note">本場賽事已結束，目前停止販售；既有購買者仍可使用原解鎖憑證閱讀。</div>` : `
+
+      <div class="premium-features premium-features-compact">
+        <span>賽事觀點</span><span>預測比分</span><span>雙方勝負條件</span><span>不確定性提醒</span><span>關鍵勝負節點</span>
+      </div>
+
+      <div class="premium-payment-compact">
         <div class="payment-method-title">選擇付款方式</div>
         <div class="payment-method-grid">
-          <button class="btn btn-gold unlock-btn" data-match-id="${escapeHtml(m.id)}" data-method="ATM" data-price="${price}">NT$${price}｜ATM 虛擬帳號</button>
-          <button class="btn btn-secondary unlock-btn" data-match-id="${escapeHtml(m.id)}" data-method="CVS" data-price="${price}">NT$${price}｜超商代碼</button>
+          <button class="btn btn-gold unlock-btn" data-match-id="${escapeHtml(m.id)}" data-method="ATM" data-price="${price}" data-base-text="ATM 虛擬帳號">ATM 虛擬帳號</button>
+          <button class="btn btn-secondary unlock-btn" data-match-id="${escapeHtml(m.id)}" data-method="CVS" data-price="${price}" data-base-text="超商代碼">超商代碼</button>
         </div>
-        <p class="payment-mode-note">綠界非信用卡收款已通過，正在載入付款環境…</p>`}
-      <div class="purchase-policy-links"><a href="premium.html">商品說明</a><a href="digital-content.html">數位內容／退款說明</a><a href="terms.html">使用條款</a><a href="contact.html">客服聯絡</a></div>
+        <p class="payment-mode-note">綠界非信用卡收款已通過，正在載入付款環境…</p>
+      </div>
+
+      <div class="premium-delivery-inline"><b>交付方式</b><span>綠界回傳付款成功後，系統自動解鎖本篇數位文章閱讀權限。</span></div>
+      <div class="purchase-policy-links"><a href="premium.html">商品說明</a><a href="digital-content.html">退款說明</a><a href="terms.html">使用條款</a><a href="contact.html">客服聯絡</a></div>
       <p class="service-boundary-note">本站僅販售數位分析內容，不接受投注、不代客下注、不收取下注資金、不提供派彩。</p>
     </section>`;
   }
+
 
   async function refreshPaymentModeUI() {
     const note = document.querySelector(".payment-mode-note");
@@ -296,7 +351,7 @@
       if (!res.ok || !data.enabled) throw new Error(data.error || "PAYMENT_DISABLED");
       if (data.mode === "stage") {
         note.innerHTML = '<strong>STAGE 測試環境</strong>｜不會產生真實款項；確認流程正常後再切換正式環境。';
-        buttons.forEach(btn => { btn.dataset.originalText ||= btn.textContent; btn.textContent = `STAGE 測試｜${btn.dataset.originalText}`; });
+        buttons.forEach(btn => { const base = btn.dataset.baseText || btn.textContent.replace(/^STAGE 測試｜/, ""); btn.dataset.baseText = base; btn.textContent = `STAGE 測試｜${base}`; });
       } else {
         note.innerHTML = '<strong>綠界正式環境</strong>｜付款完成並收到成功通知後，系統會自動解鎖本篇內容。';
       }

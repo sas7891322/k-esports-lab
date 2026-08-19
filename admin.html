@@ -16,12 +16,12 @@
       <label>分析看法</label>
       <textarea id="fPreview" class="textarea" placeholder="公開顯示的分析看法與基本判斷"></textarea>
     </div>
-    <div class="form-field"><label>賽事傾向</label><input id="fPrimary" class="input" placeholder="例如：GEN 系列賽勝"></div>
+    <div class="form-field"><label>賽事觀點</label><input id="fPrimary" class="input" placeholder="例如：GEN 系列賽勝"></div>
     <div class="form-field"><label>預測比分</label><input id="fPrediction" class="input" placeholder="例如：GEN 2：1 HLE"></div>
 
     <div class="form-field full premium-toggle-row">
       <label class="checkline premium-checkline"><input id="fPremium" type="checkbox"> 設為 K Premium 精選場</label>
-      <small>未勾選：分析看法、賽事傾向、預測比分全部公開。勾選後：只公開分析看法，其餘五個欄位需解鎖。</small>
+      <small>未勾選：分析看法、賽事觀點、預測比分全部公開。勾選後：只公開分析看法，其餘結論與深度分析需解鎖。</small>
     </div>
 
     <div id="premiumFields" class="premium-admin-fields full" hidden>
@@ -30,9 +30,9 @@
         <div class="premium-price-field"><label>解鎖價格</label><input id="fPrice" type="number" class="input" value="39" min="0"></div>
       </div>
       <div class="form-grid premium-inner-grid">
-        <div class="form-field full"><label>雙方勝負條件</label><textarea id="fConditions" class="textarea"></textarea></div>
-        <div class="form-field full"><label>不確定性提醒</label><textarea id="fRisk" class="textarea"></textarea></div>
-        <div class="form-field full"><label>關鍵勝負節點</label><textarea id="fKeyPoint" class="textarea"></textarea></div>
+        <div class="form-field full"><label>雙方勝負條件</label><textarea id="fConditions" class="textarea" placeholder="整理雙方較合理的取勝腳本與失敗風險"></textarea></div>
+        <div class="form-field full"><label>不確定性提醒</label><textarea id="fRisk" class="textarea" placeholder="整理可能推翻原始判斷的主要變數"></textarea></div>
+        <div class="form-field full"><label>關鍵勝負節點</label><textarea id="fKeyPoint" class="textarea" placeholder="整理最可能改變系列賽走向的關鍵時間點或事件"></textarea></div>
       </div>
     </div>
 

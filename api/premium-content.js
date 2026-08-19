@@ -31,12 +31,11 @@ export default async function handler(req, res) {
       matchId,
       unlocked: true,
       content: {
-        recommendationPrimary: match.recommendationPrimary || "",
-        prediction: match.prediction || "",
         conditions: match.conditions || "",
         risk: match.risk || "",
-        // 既有資料若尚未重新儲存，暫以舊版關鍵對位內容作為相容回退。
-        keyPoint: match.keyPoint || match.matchup || ""
+        keyPoint: match.keyPoint || match.matchup || "",
+        recommendationPrimary: match.recommendationPrimary || "",
+        prediction: match.prediction || ""
       }
     });
   } catch (error) {

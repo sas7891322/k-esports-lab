@@ -114,12 +114,17 @@
     return Number(match[1]) === Number(aScore) && Number(match[2]) === Number(bScore);
   }
 
+
   function renderResultManager(m) {
     if (m.status === "finished") {
+      const trend = m.trendHit === true
+        ? '<span class="result-hit">✓ 賽事觀點符合</span>'
+        : (m.trendHit === false ? '<span class="result-miss">✕ 賽事觀點未符合</span>' : '<span class="result-miss">賽事觀點未標記</span>');
       return `<div class="admin-result-finished">
         <span class="result-badge">已完賽</span>
         <strong>${window.KEL.escapeHtml(m.result || "-")}</strong>
-        ${m.resultHit ? '<span class="result-hit">✓ 比分命中</span>' : '<span class="result-miss">比分未命中</span>'}
+        ${m.resultHit ? '<span class="result-hit">✓ 比分命中</span>' : '<span class="result-miss">✕ 比分未命中</span>'}
+        ${trend}
         <button class="btn btn-secondary btn-small" data-reopen="${m.id}">重新開啟</button>
       </div>`;
     }
@@ -129,9 +134,18 @@
       <span class="result-colon">：</span>
       <input class="input result-score-input" data-score-b="${m.id}" type="number" min="0" max="5" inputmode="numeric" placeholder="0">
       <div class="result-team-label">${window.KEL.escapeHtml(m.teamBShort)}</div>
+      <label class="result-trend-field">
+        <span>賽事觀點結果</span>
+        <select class="select result-trend-select" data-trend-hit="${m.id}">
+          <option value="">請選擇</option>
+          <option value="true">✅ 符合分析</option>
+          <option value="false">❌ 未符合分析</option>
+        </select>
+      </label>
       <button class="btn btn-primary btn-small" data-finish="${m.id}">確認完賽</button>
     </div>`;
   }
+
 
   function renderList() {
     const root = $("#adminList");
@@ -157,11 +171,13 @@
     root.querySelectorAll("[data-reopen]").forEach(b => b.addEventListener("click", () => reopenMatch(b.dataset.reopen)));
   }
 
+
   async function finishMatch(id) {
     const m = adminMatches.find(x => x.id === id);
     if (!m) return;
     const a = document.querySelector(`[data-score-a="${CSS.escape(id)}"]`);
     const b = document.querySelector(`[data-score-b="${CSS.escape(id)}"]`);
+    const trend = document.querySelector(`[data-trend-hit="${CSS.escape(id)}"]`);
     const aScore = Number(a?.value), bScore = Number(b?.value);
     if (!Number.isInteger(aScore) || !Number.isInteger(bScore) || aScore < 0 || bScore < 0) {
       window.KEL.openModal("比分資料不足", "請先輸入雙方最終比分。"); return;
@@ -169,20 +185,25 @@
     if (aScore === bScore) {
       window.KEL.openModal("比分不正確", "系列賽最終比分不能平手。"); return;
     }
+    if (!trend?.value) {
+      window.KEL.openModal("尚未標記賽事觀點", "請選擇本場賽事觀點最終是否符合分析。"); return;
+    }
     const updated = {...m,
       status:"finished",
       result:`${m.teamAShort} ${aScore}：${bScore} ${m.teamBShort}`,
-      resultHit:predictionHit(m.prediction, aScore, bScore)
+      resultHit:predictionHit(m.prediction, aScore, bScore),
+      trendHit:trend.value === "true"
     };
     await api("/api/admin-matches", {method:"POST", body:JSON.stringify(updated)});
     await loadAdminMatches();
-    window.KEL.openModal("已確認完賽", updated.resultHit ? `最終比分 ${updated.result}，預測比分完全命中。` : `最終比分 ${updated.result}，賽事已移入完賽紀錄。`);
+    window.KEL.openModal("已確認完賽", `最終比分 ${updated.result}；預測比分 ${updated.resultHit ? "命中" : "未命中"}，賽事觀點 ${updated.trendHit ? "符合" : "未符合"}。`);
   }
+
 
   async function reopenMatch(id) {
     const m = adminMatches.find(x => x.id === id);
     if (!m || !confirm("確定要把這場賽事恢復成未完賽嗎？")) return;
-    const updated = {...m, status:"upcoming", result:"", resultHit:false};
+    const updated = {...m, status:"upcoming", result:"", resultHit:false, trendHit:null};
     await api("/api/admin-matches", {method:"POST", body:JSON.stringify(updated)});
     await loadAdminMatches();
   }
@@ -218,16 +239,17 @@
       recommendationPrimary: val("#fPrimary"),
       prediction: val("#fPrediction"),
 
-      // K Premium 才使用的深度內容。
+      // K Premium 才使用的深度內容。賽事觀點與預測比分沿用上方共用欄位。
       premium,
       price: premium ? Number(val("#fPrice") || 39) : 0,
       conditions: premium ? val("#fConditions") : "",
       risk: premium ? val("#fRisk") : "",
       keyPoint: premium ? val("#fKeyPoint") : "",
 
-      // 保留既有完賽資料，之後移到獨立賽果管理介面。
+      // 保留既有完賽資料。
       result: old?.result || "",
-      resultHit: !!old?.resultHit
+      resultHit: !!old?.resultHit,
+      trendHit: old?.trendHit ?? null
     };
   }
 
@@ -267,8 +289,8 @@
       "#fPrimary":m.recommendationPrimary,
       "#fPrediction":m.prediction,
       "#fRisk":m.risk,
-      // 舊版焦點賽事沒有 keyPoint；先帶入舊的 matchup，避免編輯時內容直接遺失。
-      "#fKeyPoint":m.keyPoint || m.matchup
+      // 舊母版若只有 matchup，暫時帶入關鍵勝負節點避免內容直接遺失。
+      "#fKeyPoint":m.keyPoint || m.matchup || ""
     };
     Object.entries(map).forEach(([sel,v]) => { if ($(sel)) $(sel).value = v ?? ""; });
     fillTeamSelects(m.teamAShort, m.teamBShort);
@@ -280,7 +302,7 @@
 
   async function duplicateMatch(id) {
     const m = adminMatches.find(x => x.id === id); if (!m) return;
-    const copy = {...m, id: `${m.id}-copy-${Date.now().toString().slice(-5)}`, status:"upcoming", result:"", resultHit:false};
+    const copy = {...m, id: `${m.id}-copy-${Date.now().toString().slice(-5)}`, status:"upcoming", result:"", resultHit:false, trendHit:null};
     await api("/api/admin-matches", { method:"POST", body:JSON.stringify(copy) });
     await loadAdminMatches();
   }
