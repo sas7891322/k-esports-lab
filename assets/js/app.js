@@ -1,5 +1,6 @@
 (function () {
   const STORAGE_KEY = "kel_matches_v13";
+  const PURCHASE_STORAGE_KEY = "kel_purchases_v1";
 
   let cloudMatches = null;
 
@@ -17,7 +18,7 @@
       const res = await fetch("/api/matches", { headers: { "Accept": "application/json" } });
       if (!res.ok) throw new Error(`HTTP ${res.status}`);
       const data = await res.json();
-      if (Array.isArray(data.matches) && data.matches.length) {
+      if (Array.isArray(data.matches)) {
         cloudMatches = data.matches;
         return true;
       }
@@ -46,6 +47,7 @@
   }
 
   function todayISO() {
+    // 目前使用瀏覽器本地時區；正式後端上線後統一以 Asia/Taipei 處理。
     const d = new Date();
     const y = d.getFullYear();
     const m = String(d.getMonth() + 1).padStart(2, "0");
@@ -61,9 +63,7 @@
   }
 
   function premiumPill(m) {
-    return m.premium
-      ? '<span class="pill gold">★ 焦點賽事・K PREMIUM</span>'
-      : '<span class="pill green">免費分析</span>';
+    return m.premium ? '<span class="pill gold">★ K PREMIUM</span>' : '<span class="pill green">一般分析</span>';
   }
 
   function excerpt(value, max = 100) {
@@ -86,110 +86,9 @@
         </div>
         <div class="match-note">${escapeHtml(excerpt(m.preview || "", 110))}</div>
         <div class="card-actions">
-          <a class="btn ${m.premium ? "btn-gold" : "btn-primary"}" href="match.html?id=${encodeURIComponent(m.id)}">${m.premium ? "查看焦點賽事" : "查看免費分析"}</a>
+          <a class="btn ${m.premium ? "btn-gold" : "btn-primary"}" href="match.html?id=${encodeURIComponent(m.id)}">${m.premium ? `查看 K Premium｜NT$${m.price || 39}` : "查看賽事分析"}</a>
         </div>
       </article>`;
-  }
-
-  function extractScore(value) {
-    const normalized = String(value || "").trim().replace(/[：﹕]/g, ":");
-    const match = normalized.match(/(\d+)\s*:\s*(\d+)/);
-    return match ? [Number(match[1]), Number(match[2])] : null;
-  }
-
-  function resultHitForMatch(m) {
-    const predicted = extractScore(m?.prediction);
-    const actual = extractScore(m?.result);
-    if (predicted && actual) return predicted[0] === actual[0] && predicted[1] === actual[1];
-    return !!m?.resultHit;
-  }
-
-  function normalizeDirection(value) {
-    return String(value || "")
-      .toUpperCase()
-      .replace(/[＋﹢]/g, "+")
-      .replace(/[－−﹣]/g, "-")
-      .replace(/[：﹕]/g, ":")
-      .replace(/\s+/g, "");
-  }
-
-  function directionTeamSide(m, direction) {
-    const text = normalizeDirection(direction);
-    const candidates = [
-      ["A", m?.teamAShort, m?.teamA],
-      ["B", m?.teamBShort, m?.teamB]
-    ];
-    for (const [side, short, name] of candidates) {
-      const keys = [short, name].map(normalizeDirection).filter(Boolean);
-      if (keys.some(key => text.includes(key))) return side;
-    }
-    return null;
-  }
-
-  function trendHitForMatch(m) {
-    const actual = extractScore(m?.result);
-    const direction = m?.recommendationPrimary;
-    if (!actual || !direction) return typeof m?.trendHit === "boolean" ? m.trendHit : null;
-
-    const text = normalizeDirection(direction);
-    const totalGames = actual[0] + actual[1];
-
-    // 網站版文字化賽事傾向：系列賽局數判定（不需要指定隊伍）。
-    if (text.includes("系列賽有望打滿三局") || text.includes("打滿三局") || text.includes("打滿3局")) return totalGames === 3;
-    if (text.includes("系列賽有望打滿五局") || text.includes("打滿五局") || text.includes("打滿5局")) return totalGames === 5;
-    if (text.includes("系列賽有望兩局內結束") || text.includes("兩局內結束") || text.includes("2局內結束")) return totalGames <= 2;
-    if (text.includes("系列賽有望三局內結束") || text.includes("三局內結束") || text.includes("3局內結束")) return totalGames <= 3;
-
-    const side = directionTeamSide(m, direction);
-    if (!side) return typeof m?.trendHit === "boolean" ? m.trendHit : null;
-
-    const teamScore = side === "A" ? actual[0] : actual[1];
-    const opponentScore = side === "A" ? actual[1] : actual[0];
-
-    // 新網站固定句型。
-    if (text.includes("至少可拿下一局") || text.includes("至少能拿下一局") || text.includes("至少拿下一局")) return teamScore >= 1;
-    if (text.includes("至少可拿下兩局") || text.includes("至少能拿下兩局") || text.includes("至少拿下兩局")) return teamScore >= 2;
-    if (text.includes("直落二取勝") || text.includes("直落2取勝") || text.includes("直落二勝出")) return teamScore === 2 && opponentScore === 0;
-    if (text.includes("至少兩局差取勝") || text.includes("至少2局差取勝") || text.includes("拉開局數差距取勝")) return teamScore > opponentScore && (teamScore - opponentScore) >= 2;
-    if (text.includes("系列賽勝出") || text.includes("系列賽獲勝")) return teamScore > opponentScore;
-
-    // 舊資料相容：既有紀錄仍能正確核對；新內容改用文字化賽事傾向。
-    const handicap = text.match(/([+-]\d+(?:\.\d+)?)/);
-    if (handicap) return teamScore + Number(handicap[1]) > opponentScore;
-    if (text.includes("勝") || text.includes("較優") || text.includes("看好") || text.includes("WIN") || text.includes("ML")) return teamScore > opponentScore;
-
-    return typeof m?.trendHit === "boolean" ? m.trendHit : null;
-  }
-
-  function resultStatusMarkup(hit, label) {
-    const state = hit === true ? "hit" : hit === false ? "miss" : "unknown";
-    const icon = hit === true ? "✓" : hit === false ? "✕" : "—";
-    const text = hit === true ? "命中" : hit === false ? "未命中" : "待判定";
-    return `<span class="result-review-status ${state}" aria-label="${label}${text}"><span aria-hidden="true">${icon}</span>${text}</span>`;
-  }
-
-  function resultReviewMarkup(m, { compact = false } = {}) {
-    const scoreHit = resultHitForMatch(m);
-    const trendHit = trendHitForMatch(m);
-    const premiumTag = m.premium ? '<span class="pill gold result-premium-pill">⭐ 焦點賽事</span>' : "";
-    return `
-      <div class="prediction-review ${compact ? "compact" : ""} ${m.premium ? "premium-review" : ""}">
-        ${compact ? "" : `<div class="prediction-review-head"><strong>賽前預測回顧</strong>${premiumTag}</div>`}
-        <div class="prediction-review-line">
-          <span class="prediction-review-label">預測比分</span>
-          <span class="prediction-review-main score-review-main">
-            <span class="prediction-review-value">${escapeHtml(m.prediction || "-")}</span>
-            <span class="result-review-arrow" aria-hidden="true">→</span>
-            <span class="prediction-review-result"><small>結果</small>${escapeHtml(m.result || "-")}</span>
-          </span>
-          ${resultStatusMarkup(scoreHit, "預測比分")}
-        </div>
-        <div class="prediction-review-line">
-          <span class="prediction-review-label">賽事傾向</span>
-          <span class="prediction-review-main"><span class="prediction-review-value">${escapeHtml(m.recommendationPrimary || "-")}</span></span>
-          ${resultStatusMarkup(trendHit, "賽事傾向")}
-        </div>
-      </div>`;
   }
 
   function listRow(m) {
@@ -197,46 +96,23 @@
       <a class="list-row" href="match.html?id=${encodeURIComponent(m.id)}">
         <span class="pill">${escapeHtml(m.league)}</span>
         <div><strong>${escapeHtml(m.teamAShort)} vs ${escapeHtml(m.teamBShort)}</strong><small>${fmtDate(m.date)}・${escapeHtml(m.time)}・${escapeHtml(m.bo)}</small></div>
-        ${m.premium ? '<span class="pill gold">焦點＋PREMIUM</span>' : '<span class="pill green">免費</span>'}
+        ${m.premium ? '<span class="pill gold">PREMIUM</span>' : '<span class="pill green">免費</span>'}
       </a>`;
   }
 
   function renderHome() {
     const matches = getMatches();
 
-    const featured = matches
-      .filter(m => m.status !== "finished")
-      .sort((a, b) => {
-        const premiumOrder = Number(Boolean(b.premium)) - Number(Boolean(a.premium));
-        if (premiumOrder) return premiumOrder;
-
-        const dateOrder = String(a.date || "").localeCompare(String(b.date || ""));
-        if (dateOrder) return dateOrder;
-
-        return String(a.time || "").localeCompare(String(b.time || ""));
-      })
-      .slice(0, 4);
+    const featured = matches.filter(m => m.status !== "finished").sort((a,b) => (b.premium - a.premium) || a.date.localeCompare(b.date)).slice(0, 4);
     const featuredEl = document.querySelector("#featuredList");
     if (featuredEl) featuredEl.innerHTML = featured.map(listRow).join("");
 
-    const results = matches
-      .filter(m => m.status === "finished")
-      .sort((a,b) => {
-        const dateOrder = String(b.date || "").localeCompare(String(a.date || ""));
-        if (dateOrder) return dateOrder;
-        return String(b.time || "").localeCompare(String(a.time || ""));
-      })
-      .slice(0, 4);
+    const results = matches.filter(m => m.status === "finished").sort((a,b) => b.date.localeCompare(a.date)).slice(0, 4);
     const resultEl = document.querySelector("#latestResults");
     if (resultEl) resultEl.innerHTML = results.map(m => `
-      <div class="result-row ${m.premium ? "premium-result-row" : ""}">
-        <div class="result-copy">
-          <div class="result-title-line">
-            <strong>${escapeHtml(m.teamAShort)} vs ${escapeHtml(m.teamBShort)}</strong>
-            ${m.premium ? '<span class="pill gold result-premium-pill">⭐ 焦點賽事</span>' : ""}
-          </div>
-          ${resultReviewMarkup(m, { compact: true })}
-        </div>
+      <div class="result-row">
+        <div><strong>${escapeHtml(m.teamAShort)} vs ${escapeHtml(m.teamBShort)}</strong><small>預測：${escapeHtml(m.prediction || "-")}｜結果：${escapeHtml(m.result || "-")}</small></div>
+        <div class="result-state">${m.resultHit ? "✅" : "❌"}</div>
       </div>`).join("") || '<div class="empty">尚無完賽紀錄。</div>';
 
     const leaguesEl = document.querySelector("#leagueGrid");
@@ -256,7 +132,7 @@
         const mark = logo
           ? `<div class="league-mark league-logo-mark"><img src="${logo}" alt="${escapeHtml(l)} 賽區 Logo" loading="lazy"></div>`
           : `<div class="league-mark">${escapeHtml(l.slice(0,3))}</div>`;
-        return `<a class="card league-card" href="league.html?league=${encodeURIComponent(l)}">${mark}<strong>${escapeHtml(l)}</strong><small>${lm.length} 場｜${p} 場焦點</small></a>`;
+        return `<a class="card league-card" href="league.html?league=${encodeURIComponent(l)}">${mark}<strong>${escapeHtml(l)}</strong><small>${lm.length} 場｜${p} 場 Premium</small></a>`;
       }).join("");
     }
   }
@@ -287,22 +163,70 @@
     return `<section class="card analysis-section"><h3>${title}</h3><p>${escapeHtml(content || "尚未填寫")}</p></section>`;
   }
 
-  function premiumUnlocked(m) {
-    return !!m.premiumUnlocked;
+  function getPurchases() {
+    try { return JSON.parse(localStorage.getItem(PURCHASE_STORAGE_KEY) || "{}") || {}; }
+    catch { return {}; }
   }
 
-  function renderMatch() {
+  function getPurchaseRef(matchId) {
+    return getPurchases()[matchId] || null;
+  }
+
+  function savePurchaseRef(matchId, ref) {
+    const purchases = getPurchases();
+    purchases[matchId] = { order: ref.order, token: ref.token };
+    localStorage.setItem(PURCHASE_STORAGE_KEY, JSON.stringify(purchases));
+  }
+
+  function capturePurchaseFromQuery(matchId) {
+    const order = qs("order");
+    const token = qs("token");
+    if (matchId && order && token) savePurchaseRef(matchId, { order, token });
+  }
+
+  async function getUnlockedContent(matchId) {
+    const ref = getPurchaseRef(matchId);
+    if (!ref?.order || !ref?.token) return null;
+    try {
+      const url = `/api/premium-content?matchId=${encodeURIComponent(matchId)}&order=${encodeURIComponent(ref.order)}&token=${encodeURIComponent(ref.token)}`;
+      const res = await fetch(url, { headers: { "Accept": "application/json" }, cache: "no-store" });
+      if (!res.ok) return null;
+      const data = await res.json();
+      return data?.unlocked ? data.content : null;
+    } catch {
+      return null;
+    }
+  }
+
+  function premiumContentSections(content) {
+    return [
+      analysisSection("近期狀態", content.recent),
+      analysisSection("關鍵對位", content.matchup),
+      analysisSection("版本與 BP", content.bp),
+      analysisSection("雙方勝負條件", content.conditions),
+      analysisSection("不確定性提醒", content.risk),
+      analysisSection("賽事觀點", content.recommendationPrimary),
+      analysisSection("預測比分", content.prediction)
+    ].join("");
+  }
+
+  async function renderMatch() {
     const root = document.querySelector("#matchRoot");
     if (!root) return;
     const id = qs("id");
-    const m = getMatches().find(x => x.id === id) || getMatches()[0];
+    const allMatches = getMatches();
+    const m = id ? allMatches.find(x => x.id === id) : allMatches[0];
     if (!m) { root.innerHTML = '<div class="empty">找不到賽事。</div>'; return; }
     document.title = `${m.teamAShort} vs ${m.teamBShort}｜K Esports Lab`;
 
-    const locked = !!m.premium && !premiumUnlocked(m);
+    if (m.premium) capturePurchaseFromQuery(m.id);
+    const unlockedContent = m.premium ? await getUnlockedContent(m.id) : null;
+    const locked = !!m.premium && !unlockedContent;
+    const displayedPrediction = unlockedContent?.prediction || m.prediction || "-";
+
     root.innerHTML = `
       <div class="page-head">
-        <div class="match-meta"><span class="pill">${escapeHtml(m.league)}</span><span>${fmtDate(m.date)}</span><span>${escapeHtml(m.time)}</span><span>${escapeHtml(m.bo)}</span>${m.week ? `<span>${escapeHtml(m.week)}</span>` : ""}${premiumPill(m)}</div>
+        <div class="match-meta"><span class="pill">${escapeHtml(m.league)}</span><span>${fmtDate(m.date)}</span><span>${escapeHtml(m.time)}</span><span>${escapeHtml(m.bo)}</span>${m.week ? `<span>${escapeHtml(m.week)}</span>` : ""}${premiumPill(m)}${unlockedContent ? '<span class="pill green">✓ 已解鎖</span>' : ""}</div>
       </div>
 
       <div class="card match-card ${m.premium ? "premium" : ""}" style="margin-bottom:18px">
@@ -318,73 +242,120 @@
           ${m.status === "finished" && m.result ? analysisSection("最終賽果", m.result) : ""}
           ${analysisSection("分析看法", m.preview)}
 
-          ${!m.premium ? `
-            ${analysisSection("賽事傾向", m.recommendationPrimary)}
-            ${analysisSection("預測比分", m.prediction)}
-          ` : m.status === "finished" && locked ? premiumFinishedReview(m) : locked ? premiumLock(m) : premiumContent(m)}
+          ${m.premium
+            ? (unlockedContent ? premiumContentSections(unlockedContent) : premiumLock(m))
+            : `${analysisSection("賽事觀點", m.recommendationPrimary)}${analysisSection("預測比分", m.prediction)}`}
         </main>
 
         <aside class="sticky-side">
+          ${locked
+            ? `<div class="card score-box premium-score-locked"><span>賽事觀點・預測比分</span><strong>🔒 K Premium</strong></div>`
+            : `<div class="card score-box"><span>預測比分</span><strong>${escapeHtml(displayedPrediction)}</strong></div>`}
           <div class="card card-pad">
             <div class="eyebrow">K Esports Lab</div>
             <h3 style="margin:6px 0 8px">分析原則</h3>
-            <p style="margin:0;color:var(--muted);font-size:13px;line-height:1.7">分析內容著重隊伍狀態、對位與比賽脈絡；所有賽事預測皆為研究判斷，不代表保證賽果。</p>
+            <p style="margin:0;color:var(--muted);font-size:13px;line-height:1.7">分析看法與賽事觀點著重比賽內容與判斷脈絡；所有預測內容皆不代表保證賽果。</p>
           </div>
         </aside>
       </div>`;
 
     bindUnlockButtons();
-  }
-
-  function premiumFinishedReview(m) {
-    return `
-      <section class="card premium-finished-review">
-        <div class="eyebrow" style="color:var(--gold)">K PREMIUM｜完賽回顧</div>
-        <h3>賽前預測紀錄已公開</h3>
-        <p>賽事結束後公開預測比分與賽事傾向供結果核對；雙方勝負條件、不確定性提醒與關鍵勝負節點仍維持深度內容。</p>
-        ${resultReviewMarkup(m)}
-      </section>`;
-  }
-
-  function premiumContent(m) {
-    return `
-      <section class="card card-pad" style="border-color:rgba(244,196,78,.34);background:rgba(244,196,78,.035)">
-        <div class="eyebrow" style="color:var(--gold)">K PREMIUM｜已解鎖</div>
-        <h3 style="margin:6px 0 0">焦點賽事完整分析</h3>
-      </section>
-      ${analysisSection("雙方勝負條件", m.conditions)}
-      ${analysisSection("不確定性提醒", m.risk || m.variance)}
-      ${analysisSection("關鍵勝負節點", m.recommendationSecondary)}
-      ${analysisSection("賽事傾向", m.recommendationPrimary)}
-      ${analysisSection("預測比分", m.prediction)}
-    `;
+    refreshPaymentModeUI();
   }
 
   function premiumLock(m) {
     const price = m.price || 39;
+    const finished = m.status === "finished";
     return `<section class="card premium-lock premium-product-box">
       <div class="lock-icon">🔒</div>
-      <div class="eyebrow" style="color:var(--gold)">K PREMIUM｜焦點賽事完整分析</div>
-      <h3>${escapeHtml(m.teamAShort)} vs ${escapeHtml(m.teamBShort)}｜解鎖完整內容</h3>
+      <div class="eyebrow" style="color:var(--gold)">K PREMIUM｜數位內容商品</div>
+      <h3>${escapeHtml(m.teamAShort)} vs ${escapeHtml(m.teamBShort)}｜精選深度分析</h3>
       <div class="premium-product-price">NT$${price}<small>／單篇數位文章</small></div>
-      <p>本場「分析看法」免費公開；完成付款後，解鎖下列完整分析內容。</p>
+      <p>分析看法維持公開；購買後解鎖指定賽事的完整研究內容與最終結論。</p>
       <div class="premium-features">
-        <span>雙方勝負條件</span>
-        <span>不確定性提醒</span>
-        <span>關鍵勝負節點</span>
-        <span>賽事傾向：</span>
-        <span>預測比分：</span>
+        <span>近期狀態</span><span>關鍵對位</span><span>版本與 BP</span><span>雙方勝負條件</span><span>不確定性提醒</span><span>賽事觀點與預測比分</span>
       </div>
-      <div class="delivery-note"><b>商品交付方式</b><span>正式啟用後，付款成功並經系統確認，即解鎖本篇 K Premium 焦點賽事完整分析閱讀權限。</span></div>
-      <button class="btn btn-gold unlock-btn" data-price="${price}">NT$${price} 解鎖完整分析</button>
+      <div class="delivery-note"><b>商品交付方式</b><span>付款完成並經綠界回傳交易成功後，系統自動解鎖本篇 K Premium 數位分析文章閱讀權限。</span></div>
+      ${finished ? `<div class="payment-closed-note">本場賽事已結束，目前停止販售；既有購買者仍可使用原解鎖憑證閱讀。</div>` : `
+        <div class="payment-method-title">選擇付款方式</div>
+        <div class="payment-method-grid">
+          <button class="btn btn-gold unlock-btn" data-match-id="${escapeHtml(m.id)}" data-method="ATM" data-price="${price}">NT$${price}｜ATM 虛擬帳號</button>
+          <button class="btn btn-secondary unlock-btn" data-match-id="${escapeHtml(m.id)}" data-method="CVS" data-price="${price}">NT$${price}｜超商代碼</button>
+        </div>
+        <p class="payment-mode-note">綠界非信用卡收款已通過，正在載入付款環境…</p>`}
       <div class="purchase-policy-links"><a href="premium.html">商品說明</a><a href="digital-content.html">數位內容／退款說明</a><a href="terms.html">使用條款</a><a href="contact.html">客服聯絡</a></div>
-      <p class="payment-review-note">目前金流收款功能申請／審核中，尚未開放實際付款，點擊按鈕不會產生任何扣款。</p>
-      <p class="service-boundary-note">本站提供電競賽事研究與數位分析內容，不接受投注、不代客下注、不收取下注資金、不提供派彩。</p>
+      <p class="service-boundary-note">本站僅販售數位分析內容，不接受投注、不代客下注、不收取下注資金、不提供派彩。</p>
     </section>`;
   }
 
+  async function refreshPaymentModeUI() {
+    const note = document.querySelector(".payment-mode-note");
+    const buttons = [...document.querySelectorAll(".unlock-btn")];
+    if (!note || !buttons.length) return;
+    try {
+      const res = await fetch("/api/payment-config", { cache: "no-store" });
+      const data = await res.json();
+      if (!res.ok || !data.enabled) throw new Error(data.error || "PAYMENT_DISABLED");
+      if (data.mode === "stage") {
+        note.innerHTML = '<strong>STAGE 測試環境</strong>｜不會產生真實款項；確認流程正常後再切換正式環境。';
+        buttons.forEach(btn => { btn.dataset.originalText ||= btn.textContent; btn.textContent = `STAGE 測試｜${btn.dataset.originalText}`; });
+      } else {
+        note.innerHTML = '<strong>綠界正式環境</strong>｜付款完成並收到成功通知後，系統會自動解鎖本篇內容。';
+      }
+    } catch {
+      note.textContent = "付款功能尚未完成伺服器設定，請稍後再試或聯絡客服。";
+      buttons.forEach(btn => btn.disabled = true);
+    }
+  }
+
+  function submitEcpayForm(action, params) {
+    const form = document.createElement("form");
+    form.method = "POST";
+    form.action = action;
+    form.acceptCharset = "UTF-8";
+    Object.entries(params || {}).forEach(([name, value]) => {
+      const input = document.createElement("input");
+      input.type = "hidden";
+      input.name = name;
+      input.value = String(value);
+      form.appendChild(input);
+    });
+    document.body.appendChild(form);
+    form.submit();
+  }
+
+  async function startPurchase(btn) {
+    const matchId = btn.dataset.matchId;
+    const paymentMethod = btn.dataset.method || "ATM";
+    const originalText = btn.textContent;
+    document.querySelectorAll(".unlock-btn").forEach(b => b.disabled = true);
+    btn.textContent = "建立綠界訂單中…";
+    try {
+      const res = await fetch("/api/ecpay/create-order", {
+        method: "POST",
+        headers: { "Content-Type": "application/json", "Accept": "application/json" },
+        body: JSON.stringify({ matchId, paymentMethod })
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || `HTTP_${res.status}`);
+      savePurchaseRef(matchId, { order: data.orderNo, token: data.token });
+      submitEcpayForm(data.action, data.params);
+    } catch (error) {
+      console.error(error);
+      const messages = {
+        DB_NOT_CONFIGURED: "雲端資料庫尚未設定，暫時無法建立訂單。",
+        ECPAY_PRODUCTION_NOT_CONFIGURED: "綠界正式環境金鑰尚未完成設定。",
+        MATCH_ALREADY_FINISHED: "本場賽事已結束，目前停止販售。",
+        INVALID_PRICE: "商品價格不符合目前付款方式的建單限制。"
+      };
+      openModal("付款暫時無法建立", messages[error.message] || "目前無法建立綠界訂單，請稍後再試或聯絡客服。");
+      document.querySelectorAll(".unlock-btn").forEach(b => b.disabled = false);
+      btn.textContent = originalText;
+    }
+  }
+
   function bindUnlockButtons() {
-    document.querySelectorAll(".unlock-btn").forEach(btn => btn.addEventListener("click", () => openModal("K Premium 金流申請／審核中", `本篇完整分析售價為 NT$${btn.dataset.price || 39}。目前尚未開放實際付款，因此不會產生任何扣款；正式啟用後，付款成功將解鎖指定 K Premium 焦點賽事完整分析。`)));
+    document.querySelectorAll(".unlock-btn").forEach(btn => btn.addEventListener("click", () => startPurchase(btn)));
   }
 
   function openModal(title, text) {
@@ -408,7 +379,7 @@
   }
 
   function escapeHtml(value) {
-    return String(value ?? "").replace(/[&<>'\"]/g, ch => ({"&":"&amp;","<":"&lt;",">":"&gt;","'":"&#39;",'\"':"&quot;"}[ch]));
+    return String(value ?? "").replace(/[&<>'"]/g, ch => ({"&":"&amp;","<":"&lt;",">":"&gt;","'":"&#39;",'"':"&quot;"}[ch]));
   }
 
   window.KEL = { getMatches, loadCloudMatches, saveMatches, resetMatches, openModal, matchCard, listRow, fmtDate, escapeHtml };
@@ -419,7 +390,6 @@
     await loadCloudMatches();
     renderHome();
     renderLeague();
-    renderMatch();
-    bindUnlockButtons();
+    await renderMatch();
   });
 })();

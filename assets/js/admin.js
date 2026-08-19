@@ -7,20 +7,6 @@
   function val(id) { return $(id)?.value?.trim() || ""; }
   function checked(id) { return !!$(id)?.checked; }
 
-  function selectedTime() {
-    const hour = val("#fTimeHour");
-    const minute = val("#fTimeMinute") || "00";
-    return hour ? `${hour}:${minute}` : "";
-  }
-
-  function setTimeControls(time) {
-    const match = String(time || "").match(/^(\d{1,2}):(\d{2})/);
-    const hour = match ? String(Number(match[1])).padStart(2, "0") : "";
-    const minute = match && match[2] === "30" ? "30" : "00";
-    if ($("#fTimeHour")) $("#fTimeHour").value = hour;
-    if ($("#fTimeMinute")) $("#fTimeMinute").value = minute;
-  }
-
   async function api(url, options = {}) {
     const res = await fetch(url, {
       ...options,
@@ -99,6 +85,7 @@
     }
   }
 
+
   async function logout() {
     await api("/api/admin-logout", { method: "POST", body: "{}" }).catch(() => {});
     location.replace("admin-login.html");
@@ -116,103 +103,23 @@
     if (fields) fields.hidden = !premium;
   }
 
-  function extractScore(value) {
-    const normalized = String(value || "").trim().replace(/[：﹕]/g, ":");
-    const match = normalized.match(/(\d+)\s*:\s*(\d+)/);
-    return match ? [Number(match[1]), Number(match[2])] : null;
+  function normalizeScore(value) {
+    return String(value || "").trim().replace(/[：﹕]/g, ":").replace(/\s+/g, "");
   }
 
   function predictionHit(prediction, aScore, bScore) {
-    const score = extractScore(prediction);
-    if (!score) return false;
-    return score[0] === Number(aScore) && score[1] === Number(bScore);
-  }
-
-  function resultHitForMatch(m) {
-    const actual = extractScore(m?.result);
-    if (!actual) return !!m?.resultHit;
-    return predictionHit(m?.prediction, actual[0], actual[1]);
-  }
-
-  function normalizeDirection(value) {
-    return String(value || "")
-      .toUpperCase()
-      .replace(/[＋﹢]/g, "+")
-      .replace(/[－−﹣]/g, "-")
-      .replace(/[：﹕]/g, ":")
-      .replace(/\s+/g, "");
-  }
-
-  function directionTeamSide(m, direction) {
-    const text = normalizeDirection(direction);
-    const candidates = [
-      ["A", m?.teamAShort, m?.teamA],
-      ["B", m?.teamBShort, m?.teamB]
-    ];
-    for (const [side, short, name] of candidates) {
-      const keys = [short, name].map(normalizeDirection).filter(Boolean);
-      if (keys.some(key => text.includes(key))) return side;
-    }
-    return null;
-  }
-
-  function trendHit(m, aScore, bScore) {
-    const direction = m?.recommendationPrimary;
-    if (!direction) return null;
-
-    const text = normalizeDirection(direction);
-    const scoreA = Number(aScore);
-    const scoreB = Number(bScore);
-    const totalGames = scoreA + scoreB;
-
-    // 網站版文字化賽事傾向：系列賽局數判定（不需要指定隊伍）。
-    if (text.includes("系列賽有望打滿三局") || text.includes("打滿三局") || text.includes("打滿3局")) return totalGames === 3;
-    if (text.includes("系列賽有望打滿五局") || text.includes("打滿五局") || text.includes("打滿5局")) return totalGames === 5;
-    if (text.includes("系列賽有望兩局內結束") || text.includes("兩局內結束") || text.includes("2局內結束")) return totalGames <= 2;
-    if (text.includes("系列賽有望三局內結束") || text.includes("三局內結束") || text.includes("3局內結束")) return totalGames <= 3;
-
-    const side = directionTeamSide(m, direction);
-    if (!side) return null;
-
-    const teamScore = side === "A" ? scoreA : scoreB;
-    const opponentScore = side === "A" ? scoreB : scoreA;
-
-    // 新網站固定句型。
-    if (text.includes("至少可拿下一局") || text.includes("至少能拿下一局") || text.includes("至少拿下一局")) return teamScore >= 1;
-    if (text.includes("至少可拿下兩局") || text.includes("至少能拿下兩局") || text.includes("至少拿下兩局")) return teamScore >= 2;
-    if (text.includes("直落二取勝") || text.includes("直落2取勝") || text.includes("直落二勝出")) return teamScore === 2 && opponentScore === 0;
-    if (text.includes("至少兩局差取勝") || text.includes("至少2局差取勝") || text.includes("拉開局數差距取勝")) return teamScore > opponentScore && (teamScore - opponentScore) >= 2;
-    if (text.includes("系列賽勝出") || text.includes("系列賽獲勝")) return teamScore > opponentScore;
-
-    // 舊資料相容：既有紀錄仍能正確核對；新內容改用文字化賽事傾向。
-    const handicap = text.match(/([+-]\d+(?:\.\d+)?)/);
-    if (handicap) return teamScore + Number(handicap[1]) > opponentScore;
-    if (text.includes("勝") || text.includes("較優") || text.includes("看好") || text.includes("WIN") || text.includes("ML")) return teamScore > opponentScore;
-    return null;
-  }
-
-  function trendHitForMatch(m) {
-    const actual = extractScore(m?.result);
-    if (!actual) return typeof m?.trendHit === "boolean" ? m.trendHit : null;
-    const calculated = trendHit(m, actual[0], actual[1]);
-    return calculated === null ? (typeof m?.trendHit === "boolean" ? m.trendHit : null) : calculated;
-  }
-
-  function resultIcon(value) {
-    if (value === true) return "✓";
-    if (value === false) return "✕";
-    return "—";
+    const normalized = normalizeScore(prediction);
+    const match = normalized.match(/(\d+):(\d+)$/);
+    if (!match) return false;
+    return Number(match[1]) === Number(aScore) && Number(match[2]) === Number(bScore);
   }
 
   function renderResultManager(m) {
     if (m.status === "finished") {
-      const scoreHit = resultHitForMatch(m);
-      const trendResult = trendHitForMatch(m);
       return `<div class="admin-result-finished">
         <span class="result-badge">已完賽</span>
         <strong>${window.KEL.escapeHtml(m.result || "-")}</strong>
-        <span class="${scoreHit ? "result-hit" : "result-miss"}">${resultIcon(scoreHit)} 比分${scoreHit ? "命中" : "未命中"}</span>
-        <span class="${trendResult === true ? "result-hit" : "result-miss"}">${resultIcon(trendResult)} 傾向${trendResult === true ? "命中" : trendResult === false ? "未命中" : "待確認"}</span>
+        ${m.resultHit ? '<span class="result-hit">✓ 比分命中</span>' : '<span class="result-miss">比分未命中</span>'}
         <button class="btn btn-secondary btn-small" data-reopen="${m.id}">重新開啟</button>
       </div>`;
     }
@@ -233,7 +140,7 @@
       <div class="admin-item admin-match-item">
         <div class="admin-match-main">
           <strong>${window.KEL.escapeHtml(m.league)}｜${window.KEL.escapeHtml(m.teamAShort)} vs ${window.KEL.escapeHtml(m.teamBShort)}</strong>
-          <small>${window.KEL.fmtDate(m.date)} ${window.KEL.escapeHtml(m.time)}｜${m.premium ? "焦點賽事＋K Premium" : "免費分析"}｜${m.status === "finished" ? "已結束" : "未完賽"}</small>
+          <small>${window.KEL.fmtDate(m.date)} ${window.KEL.escapeHtml(m.time)}｜${m.premium ? "K Premium" : "一般分析"}｜${m.status === "finished" ? "已結束" : "未完賽"}</small>
         </div>
         <div class="admin-item-actions">
           <button class="btn btn-secondary" data-edit="${m.id}">編輯</button>
@@ -262,24 +169,20 @@
     if (aScore === bScore) {
       window.KEL.openModal("比分不正確", "系列賽最終比分不能平手。"); return;
     }
-    const scoreHit = predictionHit(m.prediction, aScore, bScore);
-    const directionHit = trendHit(m, aScore, bScore);
     const updated = {...m,
       status:"finished",
       result:`${m.teamAShort} ${aScore}：${bScore} ${m.teamBShort}`,
-      resultHit:scoreHit,
-      trendHit:directionHit
+      resultHit:predictionHit(m.prediction, aScore, bScore)
     };
     await api("/api/admin-matches", {method:"POST", body:JSON.stringify(updated)});
     await loadAdminMatches();
-    const trendText = directionHit === true ? "賽事傾向命中" : directionHit === false ? "賽事傾向未命中" : "賽事傾向請人工確認";
-    window.KEL.openModal("已確認完賽", `最終比分 ${updated.result}；預測比分${scoreHit ? "命中" : "未命中"}，${trendText}。`);
+    window.KEL.openModal("已確認完賽", updated.resultHit ? `最終比分 ${updated.result}，預測比分完全命中。` : `最終比分 ${updated.result}，賽事已移入完賽紀錄。`);
   }
 
   async function reopenMatch(id) {
     const m = adminMatches.find(x => x.id === id);
     if (!m || !confirm("確定要把這場賽事恢復成未完賽嗎？")) return;
-    const updated = {...m, status:"upcoming", result:"", resultHit:false, trendHit:null};
+    const updated = {...m, status:"upcoming", result:"", resultHit:false};
     await api("/api/admin-matches", {method:"POST", body:JSON.stringify(updated)});
     await loadAdminMatches();
   }
@@ -298,7 +201,7 @@
       id,
       league: val("#fLeague") || "LCK",
       date,
-      time: selectedTime(),
+      time: val("#fTime"),
       bo: val("#fBo") || "BO3",
       teamA: teamA?.name || "",
       teamAShort,
@@ -307,22 +210,26 @@
       teamBShort,
       teamBLogo: teamB?.logo || "",
 
+      // 狀態不再於新增表單手動維護；新賽事預設 upcoming。
       status: old?.status || "upcoming",
 
-      // 所有場次都保存三個基本欄位；一般場三欄公開，焦點場只公開分析看法。
+      // 所有場次都固定填寫。
       preview: val("#fPreview"),
       recommendationPrimary: val("#fPrimary"),
       prediction: val("#fPrediction"),
 
+      // K Premium 才使用的深度內容。
       premium,
       price: premium ? Number(val("#fPrice") || 39) : 0,
+      recent: premium ? val("#fRecent") : "",
+      matchup: premium ? val("#fMatchup") : "",
+      bp: premium ? val("#fBP") : "",
       conditions: premium ? val("#fConditions") : "",
       risk: premium ? val("#fRisk") : "",
-      recommendationSecondary: premium ? val("#fSecondary") : "",
 
+      // 保留既有完賽資料，之後移到獨立賽果管理介面。
       result: old?.result || "",
-      resultHit: !!old?.resultHit,
-      trendHit: typeof old?.trendHit === "boolean" ? old.trendHit : null
+      resultHit: !!old?.resultHit
     };
   }
 
@@ -354,17 +261,19 @@
     const map = {
       "#fLeague":m.league,
       "#fDate":m.date,
+      "#fTime":m.time,
       "#fBo":m.bo,
       "#fPrice":m.price || 39,
       "#fPreview":m.preview,
+      "#fRecent":m.recent,
+      "#fMatchup":m.matchup,
+      "#fBP":m.bp,
       "#fConditions":m.conditions,
-      "#fRisk":m.risk || m.variance,
       "#fPrimary":m.recommendationPrimary,
       "#fPrediction":m.prediction,
-      "#fSecondary":m.recommendationSecondary
+      "#fRisk":m.risk
     };
     Object.entries(map).forEach(([sel,v]) => { if ($(sel)) $(sel).value = v ?? ""; });
-    setTimeControls(m.time);
     fillTeamSelects(m.teamAShort, m.teamBShort);
     $("#fPremium").checked = !!m.premium;
     updatePremiumFields();
@@ -374,7 +283,7 @@
 
   async function duplicateMatch(id) {
     const m = adminMatches.find(x => x.id === id); if (!m) return;
-    const copy = {...m, id: `${m.id}-copy-${Date.now().toString().slice(-5)}`, status:"upcoming", result:"", resultHit:false, trendHit:null};
+    const copy = {...m, id: `${m.id}-copy-${Date.now().toString().slice(-5)}`, status:"upcoming", result:"", resultHit:false};
     await api("/api/admin-matches", { method:"POST", body:JSON.stringify(copy) });
     await loadAdminMatches();
   }
@@ -389,7 +298,6 @@
     editId = null;
     $("#matchForm")?.reset();
     if ($("#fPrice")) $("#fPrice").value = 39;
-    setTimeControls("");
     if ($("#formTitle")) $("#formTitle").textContent = "新增賽事";
     updatePremiumFields();
     fillTeamSelects();

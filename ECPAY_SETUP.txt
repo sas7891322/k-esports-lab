@@ -1,0 +1,47 @@
+K Esports Lab｜綠界付款串接設定（v2.2）
+
+一、目前版本已完成
+- 綠界全方位金流 AioCheckOut/V5 導轉
+- ATM 虛擬帳號
+- CVS 超商代碼
+- ReturnURL 付款成功通知
+- CheckMacValue SHA256 驗證
+- 訂單資料庫
+- 付款成功後自動解鎖 K Premium
+- 同一瀏覽器保存解鎖憑證
+- 付款成功頁可再次帶回文章並恢復解鎖
+
+二、預設安全模式
+未設定 ECPAY_ENV 時，系統預設使用綠界 STAGE 測試環境。
+STAGE 使用綠界官方公開測試 MerchantID / HashKey / HashIV，不會產生真實款項。
+
+三、正式環境 Vercel Environment Variables
+確認 STAGE 測試完成後，再於 Vercel 專案設定：
+
+ECPAY_ENV=production
+ECPAY_MERCHANT_ID=你的正式 MerchantID
+ECPAY_HASH_KEY=你的正式 HashKey
+ECPAY_HASH_IV=你的正式 HashIV
+PUBLIC_SITE_URL=https://k-esports-lab.vercel.app
+
+重要：HashKey / HashIV 不可寫入前端 HTML / JS，也不要貼在公開聊天或截圖中。
+設定完成後需要重新 Deploy，環境變數才會套用到正式部署。
+
+四、正式金鑰取得位置
+綠界廠商專區 > 系統設定 > 系統介接設定 > 介接資訊
+
+五、測試流程
+1. 先部署此版本（不要先切 production）。
+2. 新增一場尚未完賽的 K Premium 賽事，價格建議 NT$39。
+3. 前台打開該場賽事。
+4. 付款區應顯示「STAGE 測試環境」。
+5. 使用 ATM 或超商代碼建立測試訂單。
+6. 至綠界 STAGE 後台查詢訂單並使用「模擬付款」。
+7. ReturnURL 收到成功通知後，付款狀態頁應變成「付款成功」。
+8. 返回文章後，完整 Premium 內容應自動顯示。
+9. 全部確認正常後，再設定 production 正式金鑰並重新部署。
+
+六、注意
+- 正式環境的可用付款方式仍以你的綠界「合約及費率／已開通服務」為準。
+- 本版本前台提供 ATM 與 CVS；如果你的正式帳號其中一項未開通，該方式建立訂單可能失敗。
+- NT$39 符合綠界目前一般賣家超商代碼最低 NT$31 的建單門檻。
