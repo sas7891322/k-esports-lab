@@ -48,6 +48,7 @@ export async function ensureOrdersTable() {
       match_id TEXT NOT NULL,
       amount INTEGER NOT NULL,
       status TEXT NOT NULL DEFAULT 'pending',
+      environment TEXT NOT NULL DEFAULT 'unknown',
       client_token_hash TEXT NOT NULL,
       ecpay_trade_no TEXT,
       payment_type TEXT,
@@ -59,15 +60,26 @@ export async function ensureOrdersTable() {
       paid_at TIMESTAMPTZ
     )
   `;
+  // Existing v2.3 databases are upgraded automatically without deleting data.
+  await q`ALTER TABLE orders ADD COLUMN IF NOT EXISTS environment TEXT NOT NULL DEFAULT 'unknown'`;
+  // v2.3 曾把綠界 SimulatePaid=1 誤當成真實付款；v2.4 自動撤銷這類 legacy 測試解鎖。
+  await q`
+    UPDATE orders
+    SET status = 'pending',
+        paid_at = NULL,
+        environment = CASE WHEN environment = 'unknown' THEN 'stage' ELSE environment END
+    WHERE status = 'paid'
+      AND raw_result->>'SimulatePaid' = '1'
+  `;
   await q`CREATE INDEX IF NOT EXISTS orders_match_id_idx ON orders (match_id, status)`;
 }
 
-export async function createOrderRecord({ merchantTradeNo, matchId, amount, clientTokenHash }) {
+export async function createOrderRecord({ merchantTradeNo, matchId, amount, clientTokenHash, environment }) {
   await ensureOrdersTable();
   const q = sql();
   await q`
-    INSERT INTO orders (merchant_trade_no, match_id, amount, client_token_hash)
-    VALUES (${merchantTradeNo}, ${matchId}, ${amount}, ${clientTokenHash})
+    INSERT INTO orders (merchant_trade_no, match_id, amount, client_token_hash, environment)
+    VALUES (${merchantTradeNo}, ${matchId}, ${amount}, ${clientTokenHash}, ${environment || "unknown"})
   `;
 }
 
@@ -75,8 +87,8 @@ export async function getOrder(merchantTradeNo) {
   await ensureOrdersTable();
   const q = sql();
   const rows = await q`
-    SELECT merchant_trade_no, match_id, amount, status, client_token_hash,
-           ecpay_trade_no, payment_type, rtn_code, rtn_msg, payment_info,
+    SELECT merchant_trade_no, match_id, amount, status, environment, client_token_hash,
+           ecpay_trade_no, payment_type, rtn_code, rtn_msg, payment_info, raw_result,
            created_at, paid_at
     FROM orders
     WHERE merchant_trade_no = ${merchantTradeNo}
@@ -97,19 +109,46 @@ export async function savePaymentInfo(merchantTradeNo, fields) {
   `;
 }
 
-export async function markOrderFromEcpay(merchantTradeNo, fields) {
+export async function recordEcpayReturn(merchantTradeNo, fields) {
   await ensureOrdersTable();
-  const paid = String(fields.RtnCode || "") === "1";
   const q = sql();
   await q`
     UPDATE orders
-    SET status = ${paid ? "paid" : "pending"},
+    SET ecpay_trade_no = COALESCE(${fields.TradeNo || null}, ecpay_trade_no),
+        payment_type = COALESCE(${fields.PaymentType || null}, payment_type),
+        rtn_code = ${String(fields.RtnCode || "")},
+        rtn_msg = ${String(fields.RtnMsg || "")},
+        raw_result = ${JSON.stringify(fields)}::jsonb
+    WHERE merchant_trade_no = ${merchantTradeNo}
+  `;
+}
+
+export async function markOrderFromEcpay(merchantTradeNo, fields) {
+  await ensureOrdersTable();
+  const q = sql();
+  // 僅由已驗證、非 SimulatePaid 的 RtnCode=1 通知呼叫此函式。
+  await q`
+    UPDATE orders
+    SET status = 'paid',
         ecpay_trade_no = COALESCE(${fields.TradeNo || null}, ecpay_trade_no),
         payment_type = COALESCE(${fields.PaymentType || null}, payment_type),
         rtn_code = ${String(fields.RtnCode || "")},
         rtn_msg = ${String(fields.RtnMsg || "")},
         raw_result = ${JSON.stringify(fields)}::jsonb,
-        paid_at = CASE WHEN ${paid} THEN COALESCE(paid_at, NOW()) ELSE paid_at END
+        paid_at = COALESCE(paid_at, NOW())
     WHERE merchant_trade_no = ${merchantTradeNo}
+  `;
+}
+
+export async function markStageOrderUnlocked(merchantTradeNo) {
+  await ensureOrdersTable();
+  const q = sql();
+  await q`
+    UPDATE orders
+    SET status = 'stage_paid',
+        paid_at = COALESCE(paid_at, NOW())
+    WHERE merchant_trade_no = ${merchantTradeNo}
+      AND environment = 'stage'
+      AND status <> 'paid'
   `;
 }

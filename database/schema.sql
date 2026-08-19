@@ -12,6 +12,7 @@ CREATE TABLE IF NOT EXISTS orders (
   match_id TEXT NOT NULL,
   amount INTEGER NOT NULL,
   status TEXT NOT NULL DEFAULT 'pending',
+  environment TEXT NOT NULL DEFAULT 'unknown',
   client_token_hash TEXT NOT NULL,
   ecpay_trade_no TEXT,
   payment_type TEXT,

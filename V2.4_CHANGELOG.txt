@@ -1,0 +1,13 @@
+K Esports Lab v2.4 Production Ready｜變更摘要
+
+1. 修正綠界 SimulatePaid=1：不再視為真實付款、不再直接標記 paid。
+2. 新增 STAGE 專用測試解鎖 endpoint；Production 硬性不可用。
+3. STAGE 模擬付款通知成功後，付款狀態頁會先顯示「ReturnURL 模擬通知驗證成功」，再由使用者執行網站端測試解鎖。
+4. 新增訂單 environment 欄位，隔離 stage／production 訂單。
+5. 自動修正 v2.3 legacy：曾被 SimulatePaid=1 誤標 paid 的訂單會撤回 pending，避免切正式環境後沿用測試解鎖。
+6. Production 未設定 MerchantID／HashKey／HashIV／PUBLIC_SITE_URL 任一項時，付款功能停用。
+7. 未明確設定 ECPAY_ENV 時，不再默認 STAGE，改為付款停用。
+8. ReturnURL／PaymentInfoURL 增加 MerchantID、訂單環境、金額驗證。
+9. bearer 解鎖 token 寫入 localStorage 後從網址列移除；新增 no-referrer 安全標頭。
+10. 新增 vercel.json 基本安全 headers。
+11. 保留 v2.3 已確認的 Premium 精簡手機版 UI、ATM／CVS、自動解鎖、後台與賽果功能。

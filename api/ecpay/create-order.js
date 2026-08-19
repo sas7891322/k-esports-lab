@@ -23,6 +23,11 @@ export default async function handler(req, res) {
       return res.status(400).json({ error: "INVALID_ORDER_REQUEST" });
     }
 
+    const config = getEcpayConfig();
+    if (!config.configured) {
+      return res.status(503).json({ error: config.mode === "production" ? "ECPAY_PRODUCTION_NOT_CONFIGURED" : "ECPAY_ENV_NOT_CONFIGURED" });
+    }
+
     const match = await getMatchById(matchId);
     if (!match || !match.premium) return res.status(404).json({ error: "PREMIUM_MATCH_NOT_FOUND" });
     if (match.status === "finished") return res.status(409).json({ error: "MATCH_ALREADY_FINISHED" });
@@ -30,11 +35,6 @@ export default async function handler(req, res) {
     const amount = Number(match.price || 39);
     if (!Number.isInteger(amount) || amount < 31) {
       return res.status(400).json({ error: "INVALID_PRICE" });
-    }
-
-    const config = getEcpayConfig();
-    if (config.production && !config.configured) {
-      return res.status(503).json({ error: "ECPAY_PRODUCTION_NOT_CONFIGURED" });
     }
 
     const orderNo = merchantTradeNo();
@@ -47,7 +47,8 @@ export default async function handler(req, res) {
       merchantTradeNo: orderNo,
       matchId,
       amount,
-      clientTokenHash: tokenHash(token)
+      clientTokenHash: tokenHash(token),
+      environment: config.mode
     });
 
     const params = {
@@ -74,7 +75,7 @@ export default async function handler(req, res) {
 
     return res.status(200).json({
       ok: true,
-      mode: config.production ? "production" : "stage",
+      mode: config.mode,
       action: config.checkoutUrl,
       params,
       orderNo,

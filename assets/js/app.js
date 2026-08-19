@@ -181,7 +181,17 @@
   function capturePurchaseFromQuery(matchId) {
     const order = qs("order");
     const token = qs("token");
-    if (matchId && order && token) savePurchaseRef(matchId, { order, token });
+    if (matchId && order && token) {
+      savePurchaseRef(matchId, { order, token });
+      // 解鎖憑證寫入本機後，立即從網址列移除 bearer token，降低 Referer／截圖外洩風險。
+      try {
+        const params = new URLSearchParams(location.search);
+        params.delete("order");
+        params.delete("token");
+        const next = `${location.pathname}${params.toString() ? `?${params.toString()}` : ""}${location.hash || ""}`;
+        history.replaceState(null, "", next);
+      } catch {}
+    }
   }
 
   async function getUnlockedContent(matchId) {
@@ -397,7 +407,8 @@
       console.error(error);
       const messages = {
         DB_NOT_CONFIGURED: "雲端資料庫尚未設定，暫時無法建立訂單。",
-        ECPAY_PRODUCTION_NOT_CONFIGURED: "綠界正式環境金鑰尚未完成設定。",
+        ECPAY_PRODUCTION_NOT_CONFIGURED: "綠界正式環境尚未完成 MerchantID／HashKey／HashIV／PUBLIC_SITE_URL 設定。",
+        ECPAY_ENV_NOT_CONFIGURED: "付款環境尚未設定；請在 Vercel 明確設定 ECPAY_ENV=stage 或 production。",
         MATCH_ALREADY_FINISHED: "本場賽事已結束，目前停止販售。",
         INVALID_PRICE: "商品價格不符合目前付款方式的建單限制。"
       };

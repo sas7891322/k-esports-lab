@@ -1,18 +1,17 @@
 # K Esports Lab
 
-K Esports Lab｜電競賽事分析研究室
+正式唯一母版：**v2.4 Production Ready（2026-08-19）**
 
-## 正式母版 v2.3（2026-08-19）
+此版本整合：
+- 雲端賽事／後台管理
+- K Premium 精簡手機版 UI
+- 綠界 ATM／CVS
+- STAGE 測試流程
+- Production 真實付款自動解鎖
+- SimulatePaid 安全處理
+- 付款環境隔離與解鎖 token 保護
 
-此版本為後續唯一母檔，整併：
-- 雲端賽事後台與登入／登出
-- 官方賽區與戰隊 Logo
-- 賽事新增、編輯、複製、刪除與完賽管理
-- 綠界非信用卡 STAGE／正式環境串接
-- ATM 虛擬帳號、超商代碼
-- 付款成功 ReturnURL 驗證與自動解鎖
-- K Premium 手機版精簡解鎖框
-- 賽後公開預測比分／賽事觀點與實際結果
-- 綠界審核用商品、條款、退款、客服資訊
-
-後續新增功能請一律從此版本延伸，不再以舊 ZIP 疊加。
+部署前請先閱讀：
+- `MASTER_RULES.txt`
+- `ECPAY_SETUP.txt`
+- `PRODUCTION_CHECKLIST.txt`

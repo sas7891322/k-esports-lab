@@ -1,13 +1,5 @@
-import crypto from "node:crypto";
 import { dbReady, getOrder } from "./_lib/db.js";
-import { tokenHash } from "./_lib/ecpay.js";
-
-function tokenMatches(given, expectedHash) {
-  const hash = tokenHash(given);
-  if (!expectedHash || hash.length !== expectedHash.length) return false;
-  try { return crypto.timingSafeEqual(Buffer.from(hash), Buffer.from(expectedHash)); }
-  catch { return false; }
-}
+import { tokenMatches } from "./_lib/ecpay.js";
 
 export default async function handler(req, res) {
   res.setHeader("Cache-Control", "no-store, max-age=0");
@@ -21,14 +13,18 @@ export default async function handler(req, res) {
   try {
     const order = await getOrder(orderNo);
     if (!order || !tokenMatches(token, order.client_token_hash)) return res.status(404).json({ error: "ORDER_NOT_FOUND" });
+    const raw = order.raw_result && typeof order.raw_result === "object" ? order.raw_result : {};
+    const simulationVerified = order.environment === "stage" && String(raw.SimulatePaid || "") === "1" && String(raw.RtnCode || "") === "1";
     return res.status(200).json({
       orderNo: order.merchant_trade_no,
       matchId: order.match_id,
       amount: order.amount,
       status: order.status,
+      environment: order.environment,
       paymentType: order.payment_type || "",
       paymentInfo: order.payment_info || {},
-      paidAt: order.paid_at || null
+      paidAt: order.paid_at || null,
+      simulationVerified
     });
   } catch (error) {
     console.error(error);

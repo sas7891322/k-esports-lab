@@ -9,20 +9,59 @@ const STAGE = {
 
 const PROD_CHECKOUT = "https://payment.ecpay.com.tw/Cashier/AioCheckOut/V5";
 
-export function getEcpayConfig() {
-  const production = String(process.env.ECPAY_ENV || "stage").toLowerCase() === "production";
-  if (!production) return { ...STAGE, production: false };
+function normalizePublicSiteUrl(value) {
+  try {
+    const raw = String(value || "").trim();
+    if (!raw) return "";
+    const url = new URL(raw);
+    if (url.protocol !== "https:") return "";
+    return url.origin;
+  } catch {
+    return "";
+  }
+}
 
-  const merchantId = process.env.ECPAY_MERCHANT_ID || "";
-  const hashKey = process.env.ECPAY_HASH_KEY || "";
-  const hashIV = process.env.ECPAY_HASH_IV || "";
+export function getEcpayConfig() {
+  const mode = String(process.env.ECPAY_ENV || "").trim().toLowerCase();
+  const publicSiteUrl = normalizePublicSiteUrl(process.env.PUBLIC_SITE_URL);
+
+  if (mode === "stage") {
+    return {
+      ...STAGE,
+      mode: "stage",
+      production: false,
+      configured: true,
+      publicSiteUrl
+    };
+  }
+
+  if (mode === "production") {
+    const merchantId = String(process.env.ECPAY_MERCHANT_ID || "").trim();
+    const hashKey = String(process.env.ECPAY_HASH_KEY || "").trim();
+    const hashIV = String(process.env.ECPAY_HASH_IV || "").trim();
+    return {
+      merchantId,
+      hashKey,
+      hashIV,
+      checkoutUrl: PROD_CHECKOUT,
+      mode: "production",
+      production: true,
+      publicSiteUrl,
+      // 正式收款必須同時具備金鑰與固定 HTTPS 正式站網址。
+      configured: Boolean(merchantId && hashKey && hashIV && publicSiteUrl)
+    };
+  }
+
+  // v2.4 起不再把「未設定環境」默認成 STAGE，避免正式站誤開測試付款。
   return {
-    merchantId,
-    hashKey,
-    hashIV,
-    checkoutUrl: PROD_CHECKOUT,
-    production: true,
-    configured: Boolean(merchantId && hashKey && hashIV)
+    merchantId: "",
+    hashKey: "",
+    hashIV: "",
+    checkoutUrl: "",
+    mode: "disabled",
+    production: false,
+    configured: false,
+    publicSiteUrl
   };
 }
 
@@ -64,6 +103,18 @@ export function verifyCheckMacValue(fields, hashKey, hashIV) {
   }
 }
 
+export function merchantMatches(fields, merchantId) {
+  return Boolean(merchantId) && String(fields?.MerchantID || "") === String(merchantId);
+}
+
+export function isSimulatedPayment(fields) {
+  return String(fields?.SimulatePaid || "") === "1";
+}
+
+export function isActualPaidNotification(fields) {
+  return String(fields?.RtnCode || "") === "1" && !isSimulatedPayment(fields);
+}
+
 export function merchantTradeNo() {
   // ECPay requires 20 chars max, alphanumeric only, and unique per order.
   const time = Date.now().toString(36).toUpperCase();
@@ -77,6 +128,16 @@ export function clientToken() {
 
 export function tokenHash(token) {
   return crypto.createHash("sha256").update(String(token), "utf8").digest("hex");
+}
+
+export function tokenMatches(given, expectedHash) {
+  const hash = tokenHash(given);
+  if (!expectedHash || hash.length !== expectedHash.length) return false;
+  try {
+    return crypto.timingSafeEqual(Buffer.from(hash), Buffer.from(expectedHash));
+  } catch {
+    return false;
+  }
 }
 
 export function taipeiTradeDate(date = new Date()) {
@@ -94,8 +155,8 @@ export function taipeiTradeDate(date = new Date()) {
 }
 
 export function requestBaseUrl(req) {
-  const configured = String(process.env.PUBLIC_SITE_URL || "").replace(/\/$/, "");
-  if (configured) return configured;
+  const config = getEcpayConfig();
+  if (config.publicSiteUrl) return config.publicSiteUrl;
   const proto = String(req.headers["x-forwarded-proto"] || "https").split(",")[0].trim();
   const host = String(req.headers["x-forwarded-host"] || req.headers.host || "k-esports-lab.vercel.app").split(",")[0].trim();
   return `${proto}://${host}`;

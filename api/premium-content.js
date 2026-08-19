@@ -1,13 +1,5 @@
-import crypto from "node:crypto";
 import { dbReady, getMatchById, getOrder } from "./_lib/db.js";
-import { tokenHash } from "./_lib/ecpay.js";
-
-function tokenMatches(given, expectedHash) {
-  const hash = tokenHash(given);
-  if (!expectedHash || hash.length !== expectedHash.length) return false;
-  try { return crypto.timingSafeEqual(Buffer.from(hash), Buffer.from(expectedHash)); }
-  catch { return false; }
-}
+import { getEcpayConfig, tokenMatches } from "./_lib/ecpay.js";
 
 export default async function handler(req, res) {
   res.setHeader("Cache-Control", "no-store, max-age=0");
@@ -21,15 +13,24 @@ export default async function handler(req, res) {
 
   try {
     const order = await getOrder(orderNo);
-    if (!order || order.match_id !== matchId || order.status !== "paid" || !tokenMatches(token, order.client_token_hash)) {
+    if (!order || order.match_id !== matchId || !tokenMatches(token, order.client_token_hash)) {
       return res.status(403).json({ error: "NOT_UNLOCKED" });
     }
+
+    const config = getEcpayConfig();
+    const raw = order.raw_result && typeof order.raw_result === "object" ? order.raw_result : {};
+    // 即使是 legacy 資料，只要來源是 SimulatePaid=1 就永遠不能視為真實付款。
+    const actualPaid = order.status === "paid" && String(raw.SimulatePaid || "") !== "1";
+    const stagePaid = order.status === "stage_paid" && order.environment === "stage" && config.mode === "stage";
+    if (!actualPaid && !stagePaid) return res.status(403).json({ error: "NOT_UNLOCKED" });
+
     const match = await getMatchById(matchId);
     if (!match || !match.premium) return res.status(404).json({ error: "PREMIUM_MATCH_NOT_FOUND" });
 
     return res.status(200).json({
       matchId,
       unlocked: true,
+      testMode: stagePaid,
       content: {
         conditions: match.conditions || "",
         risk: match.risk || "",

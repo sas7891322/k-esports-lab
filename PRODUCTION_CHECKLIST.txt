@@ -1,0 +1,23 @@
+K Esports Lab｜v2.4 正式收款上線檢查表
+
+[ ] 1. 綠界正式非信用卡收款服務已通過
+[ ] 2. Vercel DATABASE_URL 正常
+[ ] 3. Vercel ECPAY_ENV=production
+[ ] 4. Vercel ECPAY_MERCHANT_ID 已填正式值
+[ ] 5. Vercel ECPAY_HASH_KEY 已填正式值
+[ ] 6. Vercel ECPAY_HASH_IV 已填正式值
+[ ] 7. Vercel PUBLIC_SITE_URL=https://k-esports-lab.vercel.app
+[ ] 8. 重新部署 Production
+[ ] 9. K Premium 頁面顯示「綠界正式環境」，沒有 STAGE 字樣
+[ ] 10. /api/payment-config 回傳 enabled=true、mode=production
+[ ] 11. 第一筆真實 NT$39 ATM 或 CVS 訂單成功建立
+[ ] 12. 綠界正式後台能查到該筆訂單
+[ ] 13. 完成真實付款
+[ ] 14. ReturnURL 收到真實付款通知，網站顯示付款成功
+[ ] 15. K Premium 五欄自動解鎖
+[ ] 16. 登出／換頁／重新整理後，同一瀏覽器仍能閱讀已解鎖內容
+
+安全確認：
+[ ] 正式 HashKey／HashIV 未出現在任何 HTML／JS／截圖／公開 repository
+[ ] SimulatePaid=1 不會把 production 訂單改成 paid
+[ ] Production 無法呼叫 stage-only 解鎖 endpoint

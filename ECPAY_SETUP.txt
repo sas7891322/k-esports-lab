@@ -1,47 +1,67 @@
-K Esports Lab｜綠界付款串接設定（正式母版 v2.3）
+K Esports Lab｜綠界付款串接設定（正式母版 v2.4 Production Ready）
 
-一、目前版本已完成
-- 綠界全方位金流 AioCheckOut/V5 導轉
+一、目前已完成
+- 綠界 AioCheckOut/V5 導轉
 - ATM 虛擬帳號
 - CVS 超商代碼
-- ReturnURL 付款成功通知
+- PaymentInfoURL 取號資訊
+- ReturnURL 付款通知
 - CheckMacValue SHA256 驗證
+- MerchantID／金額／訂單環境交叉驗證
 - 訂單資料庫
-- 付款成功後自動解鎖 K Premium
+- 真實付款成功後自動解鎖 K Premium
 - 同一瀏覽器保存解鎖憑證
-- 付款成功頁可再次帶回文章並恢復解鎖
+- bearer 解鎖 token 寫入本機後自網址列移除
+- Production 與 STAGE 訂單環境隔離
 
-二、預設安全模式
-未設定 ECPAY_ENV 時，系統預設使用綠界 STAGE 測試環境。
-STAGE 使用綠界官方公開測試 MerchantID / HashKey / HashIV，不會產生真實款項。
+二、v2.4 重要安全修正
+綠界官方規定 SimulatePaid=1 只是「模擬付款通知」，用來驗證 ReturnURL 是否能收到通知，並不代表消費者真的付款。
+因此 v2.4：
+- STAGE／Production 收到 SimulatePaid=1 都「不會」把訂單標記為 paid。
+- STAGE 在確認 ReturnURL 模擬通知成功後，付款狀態頁才會出現「完成 STAGE 測試解鎖」按鈕，用網站自己的 stage-only endpoint 模擬交付流程。
+- /api/ecpay/stage-unlock 在 Production 會直接不可用。
+- Production 只接受 CheckMacValue 正確、MerchantID 正確、金額正確、環境正確、RtnCode=1 且非 SimulatePaid 的通知解鎖。
 
-三、正式環境 Vercel Environment Variables
-確認 STAGE 測試完成後，再於 Vercel 專案設定：
+三、付款環境改為「必須明確設定」
+v2.4 不再預設 STAGE。
+若沒有 ECPAY_ENV，付款功能會停用，避免正式站因漏設環境而意外跑測試金流。
 
+STAGE 測試：
+ECPAY_ENV=stage
+PUBLIC_SITE_URL=https://k-esports-lab.vercel.app
+
+Production 正式：
 ECPAY_ENV=production
 ECPAY_MERCHANT_ID=你的正式 MerchantID
 ECPAY_HASH_KEY=你的正式 HashKey
 ECPAY_HASH_IV=你的正式 HashIV
 PUBLIC_SITE_URL=https://k-esports-lab.vercel.app
 
-重要：HashKey / HashIV 不可寫入前端 HTML / JS，也不要貼在公開聊天或截圖中。
-設定完成後需要重新 Deploy，環境變數才會套用到正式部署。
+正式環境 PUBLIC_SITE_URL 必須是 HTTPS；MerchantID／HashKey／HashIV／PUBLIC_SITE_URL 任一缺少時，正式付款會自動停用。
 
-四、正式金鑰取得位置
+四、STAGE 正確測試流程
+1. Vercel 設 ECPAY_ENV=stage 與 PUBLIC_SITE_URL，重新 Deploy。
+2. 建立 ATM 或 CVS 測試訂單。
+3. 至綠界 STAGE 後台對該訂單按「模擬付款」。
+4. 綠界送出 SimulatePaid=1 到 ReturnURL。
+5. 本站付款狀態頁顯示「ReturnURL 模擬通知驗證成功」。
+6. 此時訂單仍不是 paid，符合綠界規範。
+7. 按本站「完成 STAGE 測試解鎖」，測試網站端內容交付與解鎖 UI。
+8. ATM／CVS 都確認正常後，再切 Production。
+
+五、Production 上線
+1. 在 Vercel 填正式 MerchantID／HashKey／HashIV（不要貼到聊天、截圖或前端程式）。
+2. ECPAY_ENV 改 production。
+3. PUBLIC_SITE_URL 固定 https://k-esports-lab.vercel.app
+4. 重新 Deploy。
+5. 確認前台顯示「綠界正式環境」，不再出現 STAGE 字樣。
+6. 用一筆 NT$39 真實小額訂單測試實際付款。
+7. 真實付款後確認：綠界正式後台已付款、網站訂單 paid、文章解鎖。
+
+六、正式金鑰取得位置
 綠界廠商專區 > 系統設定 > 系統介接設定 > 介接資訊
 
-五、測試流程
-1. 先部署此版本（不要先切 production）。
-2. 新增一場尚未完賽的 K Premium 賽事，價格建議 NT$39。
-3. 前台打開該場賽事。
-4. 付款區應顯示「STAGE 測試環境」。
-5. 使用 ATM 或超商代碼建立測試訂單。
-6. 至綠界 STAGE 後台查詢訂單並使用「模擬付款」。
-7. ReturnURL 收到成功通知後，付款狀態頁應變成「付款成功」。
-8. 返回文章後，完整 Premium 內容應自動顯示。
-9. 全部確認正常後，再設定 production 正式金鑰並重新部署。
-
-六、注意
-- 正式環境的可用付款方式仍以你的綠界「合約及費率／已開通服務」為準。
-- 本版本前台提供 ATM 與 CVS；如果你的正式帳號其中一項未開通，該方式建立訂單可能失敗。
-- NT$39 符合綠界目前一般賣家超商代碼最低 NT$31 的建單門檻。
+七、注意事項
+- 正式可用付款方式以你的綠界「合約及費率／已開通服務」為準。
+- 本站目前提供 ATM 與 CVS；若正式帳號其中一項未開通，該方式可能被綠界拒絕建單。
+- 不要把正式 HashKey／HashIV 寫入 assets/js、HTML 或任何公開 Git repository。
