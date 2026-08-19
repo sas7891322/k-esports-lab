@@ -31,13 +31,12 @@ export default async function handler(req, res) {
       matchId,
       unlocked: true,
       content: {
-        recent: match.recent || "",
-        matchup: match.matchup || "",
-        bp: match.bp || "",
+        recommendationPrimary: match.recommendationPrimary || "",
+        prediction: match.prediction || "",
         conditions: match.conditions || "",
         risk: match.risk || "",
-        recommendationPrimary: match.recommendationPrimary || "",
-        prediction: match.prediction || ""
+        // 既有資料若尚未重新儲存，暫以舊版關鍵對位內容作為相容回退。
+        keyPoint: match.keyPoint || match.matchup || ""
       }
     });
   } catch (error) {

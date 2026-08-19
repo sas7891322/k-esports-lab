@@ -221,11 +221,9 @@
       // K Premium 才使用的深度內容。
       premium,
       price: premium ? Number(val("#fPrice") || 39) : 0,
-      recent: premium ? val("#fRecent") : "",
-      matchup: premium ? val("#fMatchup") : "",
-      bp: premium ? val("#fBP") : "",
       conditions: premium ? val("#fConditions") : "",
       risk: premium ? val("#fRisk") : "",
+      keyPoint: premium ? val("#fKeyPoint") : "",
 
       // 保留既有完賽資料，之後移到獨立賽果管理介面。
       result: old?.result || "",
@@ -265,13 +263,12 @@
       "#fBo":m.bo,
       "#fPrice":m.price || 39,
       "#fPreview":m.preview,
-      "#fRecent":m.recent,
-      "#fMatchup":m.matchup,
-      "#fBP":m.bp,
       "#fConditions":m.conditions,
       "#fPrimary":m.recommendationPrimary,
       "#fPrediction":m.prediction,
-      "#fRisk":m.risk
+      "#fRisk":m.risk,
+      // 舊版焦點賽事沒有 keyPoint；先帶入舊的 matchup，避免編輯時內容直接遺失。
+      "#fKeyPoint":m.keyPoint || m.matchup
     };
     Object.entries(map).forEach(([sel,v]) => { if ($(sel)) $(sel).value = v ?? ""; });
     fillTeamSelects(m.teamAShort, m.teamBShort);
