@@ -41,6 +41,40 @@
     return { side: null, aliases: [] };
   }
 
+  function parseScoreForMatch(value, match) {
+    const text = norm(value);
+    const score = text.match(/(\d+):(\d+)/);
+    if (!score) return null;
+
+    let first = Number(score[1]);
+    let second = Number(score[2]);
+    if (!Number.isInteger(first) || !Number.isInteger(second)) return null;
+
+    const before = text.slice(0, score.index);
+    const after = text.slice(score.index + score[0].length);
+    const aAliases = aliases(match, "A");
+    const bAliases = aliases(match, "B");
+
+    const beforeA = containsAlias(before, aAliases);
+    const beforeB = containsAlias(before, bAliases);
+    const afterA = containsAlias(after, aAliases);
+    const afterB = containsAlias(after, bAliases);
+
+    // 若文字是「B隊 1:3 A隊」，轉回資料欄位的 A:B 順序。
+    if (beforeB && afterA && !(beforeA && afterB)) {
+      return { a: second, b: first };
+    }
+
+    // 一般格式「A隊 3:1 B隊」或單純「3:1」皆視為 A:B。
+    return { a: first, b: second };
+  }
+
+  function predictionScoreHit(match, aScore, bScore) {
+    const parsed = parseScoreForMatch(match?.prediction, match);
+    if (!parsed) return null;
+    return parsed.a === Number(aScore) && parsed.b === Number(bScore);
+  }
+
   function sideScore(side, aScore, bScore) {
     return side === "A" ? aScore : bScore;
   }
@@ -312,6 +346,137 @@
     finally { refreshing = false; }
   }
 
+  let finishCaptureBound = false;
+  let historicalScoreRepairDone = false;
+
+  async function postMatchUpdate(match) {
+    const res = await fetch("/api/admin-matches", {
+      method: "POST",
+      credentials: "same-origin",
+      headers: { "Content-Type": "application/json", "Accept": "application/json" },
+      body: JSON.stringify(match)
+    });
+    let data = {};
+    try { data = await res.json(); } catch {}
+    if (!res.ok) throw new Error(data.error || `HTTP_${res.status}`);
+    return data;
+  }
+
+  async function finishMatchWithFixedScore(button) {
+    const id = String(button?.dataset?.finish || "");
+    let match = matchMap.get(id);
+
+    if (!match) {
+      await refreshMatches();
+      match = matchMap.get(id);
+    }
+    if (!match) {
+      window.KEL?.openModal?.("找不到賽事", "請重新整理後台後再試一次。");
+      return;
+    }
+
+    const entry = button.closest(".admin-result-entry");
+    const aInput = entry?.querySelector(`[data-score-a="${CSS.escape(id)}"]`);
+    const bInput = entry?.querySelector(`[data-score-b="${CSS.escape(id)}"]`);
+    const trendSelect = entry?.querySelector(`[data-trend-hit="${CSS.escape(id)}"]`);
+
+    const aRaw = String(aInput?.value ?? "").trim();
+    const bRaw = String(bInput?.value ?? "").trim();
+    const aScore = Number(aRaw);
+    const bScore = Number(bRaw);
+
+    if (
+      aRaw === "" || bRaw === "" ||
+      !Number.isInteger(aScore) || !Number.isInteger(bScore) ||
+      aScore < 0 || bScore < 0
+    ) {
+      window.KEL?.openModal?.("比分資料不足", "請先輸入雙方最終比分。");
+      return;
+    }
+    if (aScore === bScore) {
+      window.KEL?.openModal?.("比分不正確", "系列賽最終比分不能平手。");
+      return;
+    }
+    if (!trendSelect?.value) {
+      window.KEL?.openModal?.("尚未標記賽事觀點", "若系統無法自動判定，請手動選擇本場賽事觀點是否符合分析。");
+      return;
+    }
+
+    const scoreHit = predictionScoreHit(match, aScore, bScore);
+    const updated = {
+      ...match,
+      status: "finished",
+      result: `${match.teamAShort} ${aScore}：${bScore} ${match.teamBShort}`,
+      resultHit: scoreHit === true,
+      trendHit: trendSelect.value === "true"
+    };
+
+    button.disabled = true;
+    const oldText = button.textContent;
+    button.textContent = "儲存賽果中…";
+
+    try {
+      await postMatchUpdate(updated);
+      matchMap.set(id, updated);
+      window.KEL?.openModal?.(
+        "已確認完賽",
+        `最終比分 ${updated.result}；預測比分 ${updated.resultHit ? "命中" : "未命中"}，賽事觀點 ${updated.trendHit ? "符合" : "未符合"}。`
+      );
+      setTimeout(() => location.reload(), 700);
+    } catch (error) {
+      button.disabled = false;
+      button.textContent = oldText;
+      window.KEL?.openModal?.("儲存失敗", error?.message || "請稍後再試。");
+    }
+  }
+
+  function bindFinishCapture() {
+    if (finishCaptureBound) return;
+    finishCaptureBound = true;
+
+    document.addEventListener("click", (event) => {
+      const button = event.target.closest?.("[data-finish]");
+      if (!button) return;
+
+      // 攔截舊版 admin.js 的判定，改用可辨識「TSW 3：1 GAM」的新版邏輯。
+      event.preventDefault();
+      event.stopPropagation();
+      event.stopImmediatePropagation();
+      finishMatchWithFixedScore(button);
+    }, true);
+  }
+
+  async function repairHistoricalScoreHits() {
+    if (historicalScoreRepairDone) return;
+    historicalScoreRepairDone = true;
+
+    let changed = false;
+    for (const match of [...matchMap.values()]) {
+      if (match?.status !== "finished") continue;
+
+      const actual = parseScoreForMatch(match.result, match);
+      const predicted = parseScoreForMatch(match.prediction, match);
+      if (!actual || !predicted) continue;
+
+      const correctHit = predicted.a === actual.a && predicted.b === actual.b;
+      if (match.resultHit === correctHit) continue;
+
+      const updated = { ...match, resultHit: correctHit };
+      try {
+        await postMatchUpdate(updated);
+        matchMap.set(match.id, updated);
+        changed = true;
+      } catch (error) {
+        console.warn("Unable to repair historical resultHit", match.id, error);
+      }
+    }
+
+    if (changed) {
+      // 讓後台顯示修正後的 ✅ / ❌。
+      await refreshMatches();
+    }
+  }
+
   function injectStyles() {
     if ($("#kelAutoResultStyles")) return;
     const style = document.createElement("style");
@@ -379,7 +544,9 @@
 
   async function init() {
     injectStyles();
+    bindFinishCapture();
     await refreshMatches();
+    await repairHistoricalScoreHits();
 
     const timer = setInterval(() => {
       initObserver();
