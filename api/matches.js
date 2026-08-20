@@ -3,7 +3,9 @@ import {
   listMatches,
   getMatchById,
   upsertMatchReminder,
-  removeMatchReminder
+  removeMatchReminder,
+  countMatchReminders,
+  listMatchReminderCounts
 } from "./_lib/db.js";
 
 const PREMIUM_DEEP_FIELDS = [
@@ -58,11 +60,17 @@ export default async function handler(req, res) {
 
   try {
     if (req.method === "GET") {
-      const matches = await listMatches();
+      const [matches, reminderCounts] = await Promise.all([
+        listMatches(),
+        listMatchReminderCounts()
+      ]);
       const pushPublicKey = String(process.env.VAPID_PUBLIC_KEY || "").trim();
       res.setHeader("Cache-Control", "s-maxage=30, stale-while-revalidate=60");
       res.status(200).json({
-        matches: matches.map(publicView),
+        matches: matches.map(match => publicView({
+          ...match,
+          reminderCount: Number(reminderCounts[match.id] || 0)
+        })),
         pushEnabled: Boolean(pushPublicKey && process.env.VAPID_PRIVATE_KEY),
         pushPublicKey
       });
@@ -95,7 +103,8 @@ export default async function handler(req, res) {
           return;
         }
         await upsertMatchReminder(matchId, subscription);
-        res.status(200).json({ ok: true, subscribed: true });
+        const reminderCount = await countMatchReminders(matchId);
+        res.status(200).json({ ok: true, subscribed: true, reminderCount });
         return;
       }
 
@@ -106,7 +115,8 @@ export default async function handler(req, res) {
           return;
         }
         await removeMatchReminder(matchId, endpoint);
-        res.status(200).json({ ok: true, subscribed: false });
+        const reminderCount = await countMatchReminders(matchId);
+        res.status(200).json({ ok: true, subscribed: false, reminderCount });
         return;
       }
 

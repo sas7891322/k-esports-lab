@@ -227,20 +227,26 @@
     const data = await res.json().catch(() => ({}));
     if (!res.ok) throw new Error(data.error || `HTTP_${res.status}`);
     setReminderLocal(matchId, true);
+    return Number(data.reminderCount || 0);
   }
 
   async function cancelReminder(matchId) {
-    if (!("serviceWorker" in navigator)) { setReminderLocal(matchId, false); return; }
+    if (!("serviceWorker" in navigator)) { setReminderLocal(matchId, false); return null; }
     const registration = await navigator.serviceWorker.getRegistration("/");
     const subscription = await registration?.pushManager?.getSubscription();
+    let reminderCount = null;
     if (subscription?.endpoint) {
-      await fetch("/api/matches", {
+      const res = await fetch("/api/matches", {
         method: "POST",
         headers: { "Content-Type": "application/json", "Accept": "application/json" },
         body: JSON.stringify({ action: "unsubscribeReminder", matchId, endpoint: subscription.endpoint })
-      }).catch(() => {});
+      });
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok) throw new Error(data.error || `HTTP_${res.status}`);
+      reminderCount = Number(data.reminderCount || 0);
     }
     setReminderLocal(matchId, false);
+    return reminderCount;
   }
 
   function reminderMessage(error) {
@@ -259,6 +265,14 @@
     btn.textContent = active ? "✓ 已設定賽事提醒（點擊取消）" : "🔔 設定賽事提醒";
   }
 
+  function updateReminderCount(matchId, count) {
+    if (!Number.isFinite(count)) return;
+    document.querySelectorAll(`.reminder-count[data-match-id="${CSS.escape(matchId)}"]`).forEach(el => {
+      el.textContent = count > 0 ? `已有 ${count} 人開啟提醒` : "";
+      el.hidden = count < 1;
+    });
+  }
+
   function bindReminderButtons() {
     document.querySelectorAll(".reminder-btn").forEach(btn => {
       updateReminderButton(btn);
@@ -271,10 +285,12 @@
         btn.textContent = active ? "取消提醒中…" : "設定提醒中…";
         try {
           if (active) {
-            await cancelReminder(matchId);
+            const reminderCount = await cancelReminder(matchId);
+            updateReminderCount(matchId, reminderCount);
             openModal("已取消賽事提醒", "這場焦點賽事發布分析時，不會再透過本裝置通知你。");
           } else {
-            await saveReminder(matchId);
+            const reminderCount = await saveReminder(matchId);
+            updateReminderCount(matchId, reminderCount);
             openModal("賽事提醒已設定", "分析正式發布後，K Esports Lab 會透過瀏覽器推播通知你。你不需要保持這個頁面開啟。");
           }
           updateReminderButton(btn);
@@ -297,6 +313,7 @@
       <h3>${escapeHtml(m.teamAShort)} vs ${escapeHtml(m.teamBShort)}｜K Premium 分析即將發布</h3>
       <p>這場已先列為焦點賽事，目前尚未公開任何分析內容，也尚未開放付費解鎖。可以先設定賽事提醒，分析發布後會由瀏覽器推播通知。</p>
       <button class="btn btn-gold reminder-btn" type="button" data-match-id="${escapeHtml(m.id)}">🔔 設定賽事提醒</button>
+      <div class="reminder-count" data-match-id="${escapeHtml(m.id)}"${Number(m.reminderCount || 0) < 1 ? " hidden" : ""}>已有 ${Number(m.reminderCount || 0)} 人開啟提醒</div>
       <small>首次設定時，瀏覽器會詢問通知權限。提醒只用於本場分析發布通知。</small>
     </section>`;
   }

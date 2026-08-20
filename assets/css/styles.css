@@ -1015,6 +1015,13 @@ input[type="time"]::-webkit-calendar-picker-indicator {
   border: 1px solid rgba(49,217,124,.30);
   background: rgba(49,217,124,.12);
 }
+.reminder-count {
+  margin-top: 10px;
+  color: #f5d77e;
+  font-size: 13px;
+  font-weight: 800;
+}
+.reminder-count[hidden] { display: none; }
 
 @media (max-width: 720px) {
   .desktop-time-picker { display: none; }

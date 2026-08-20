@@ -186,6 +186,24 @@ export async function removeMatchReminder(matchId, endpoint) {
   await q`DELETE FROM match_reminders WHERE match_id = ${matchId} AND endpoint = ${endpoint}`;
 }
 
+export async function countMatchReminders(matchId) {
+  await ensureMatchRemindersTable();
+  const q = sql();
+  const rows = await q`SELECT COUNT(*)::int AS count FROM match_reminders WHERE match_id = ${matchId}`;
+  return Number(rows[0]?.count || 0);
+}
+
+export async function listMatchReminderCounts() {
+  await ensureMatchRemindersTable();
+  const q = sql();
+  const rows = await q`
+    SELECT match_id, COUNT(*)::int AS count
+    FROM match_reminders
+    GROUP BY match_id
+  `;
+  return Object.fromEntries(rows.map(row => [String(row.match_id), Number(row.count || 0)]));
+}
+
 export async function listMatchReminders(matchId) {
   await ensureMatchRemindersTable();
   const q = sql();
@@ -198,4 +216,3 @@ export async function clearMatchReminders(matchId) {
   const q = sql();
   await q`DELETE FROM match_reminders WHERE match_id = ${matchId}`;
 }
-
