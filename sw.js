@@ -4,8 +4,8 @@ self.addEventListener("push", event => {
   const title = data.title || "K Esports Lab";
   const options = {
     body: data.body || "你設定提醒的焦點賽事分析已發布。",
-    icon: "/assets/img/k-logo.svg",
-    badge: "/assets/img/k-logo.svg",
+    icon: "/assets/img/k-app-192.png",
+    badge: "/assets/img/k-app-192.png",
     tag: data.matchId ? `kel-match-${data.matchId}` : "kel-match-reminder",
     renotify: true,
     data: { url: data.url || "/" }
