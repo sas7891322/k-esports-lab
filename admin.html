@@ -1,12 +1,12 @@
-<!doctype html><html lang="zh-Hant"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><meta name="robots" content="noindex,nofollow"><title>內容管理工具｜K Esports Lab</title><link rel="icon" href="assets/img/k-logo.svg"><link rel="stylesheet" href="assets/css/styles.css"></head><body>
+<!doctype html><html lang="zh-Hant"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><meta name="robots" content="noindex,nofollow"><title>內容管理工具｜K Esports Lab</title><link rel="icon" href="assets/img/k-logo.svg"><link rel="stylesheet" href="assets/css/styles.css"><link rel="manifest" href="/manifest.webmanifest"><link rel="apple-touch-icon" href="/assets/img/k-logo-192.png"></head><body>
 <header class="topbar"><div class="shell topbar-inner"><a class="brand" href="index.html"><img src="assets/img/k-logo.svg" alt=""><span>K ESPORTS LAB<small>內容管理工具</small></span></a><nav class="nav"><button id="adminTopLogout" class="nav-logout" type="button">登出</button><a href="index.html">前台</a><a class="active" href="admin-login.html">管理工具</a></nav><button id="menuBtn" class="menu-btn">☰</button></div><div id="mobileMenu" class="mobile-menu shell"><a href="index.html">返回前台</a><button id="adminMobileLogout" class="mobile-logout" type="button">登出</button></div></header>
 <main class="shell"><div id="adminAccessCheck" class="admin-access-check"><div class="card"><strong>正在驗證管理員權限…</strong></div></div><div id="adminApp" class="admin-wrap" hidden><div class="admin-main">
 <section class="card form-card"><h2 id="formTitle">新增賽事</h2>
 <form id="matchForm">
   <div class="form-grid">
     <div class="form-field"><label>賽區</label><select id="fLeague" class="select"><option>LCK</option><option>LPL</option><option>LCP</option><option>LEC</option><option>LCS</option><option>CBLOL</option></select></div>
-    <div class="form-field"><label>日期</label><input id="fDate" type="date" class="input" required></div>
-    <div class="form-field"><label>預定時間</label><input id="fTime" type="time" class="input"></div>
+    <div class="form-field"><label>日期</label><div class="picker-input-wrap"><input id="fDate" type="date" class="input picker-input" required><button class="picker-trigger" type="button" data-picker="#fDate" aria-label="選擇日期">選日期</button></div></div>
+    <div class="form-field admin-time-field"><label>預定時間</label><div class="picker-input-wrap desktop-time-picker"><input id="fTime" type="time" step="1800" class="input picker-input"><button class="picker-trigger" type="button" data-picker="#fTime" aria-label="選擇時間">選時間</button></div><div class="mobile-time-selects" aria-label="手機版預定時間"><label><span>時</span><select id="fTimeHour" class="select"></select></label><span class="mobile-time-colon">：</span><label><span>分</span><select id="fTimeMinute" class="select"><option value="00">00</option><option value="30">30</option></select></label></div></div>
     <div class="form-field"><label>賽制</label><select id="fBo" class="select"><option>BO3</option><option>BO5</option><option>BO1</option></select></div>
 
     <div class="form-field"><label>A 隊</label><select id="fTeamASelect" class="select" required></select><div id="fTeamAPreview" class="admin-team-preview"></div></div>
@@ -20,8 +20,13 @@
     <div class="form-field"><label>預測比分</label><input id="fPrediction" class="input" placeholder="例如：GEN 2：1 HLE"></div>
 
     <div class="form-field full premium-toggle-row">
-      <label class="checkline premium-checkline"><input id="fPremium" type="checkbox"> 設為 K Premium 精選場</label>
-      <small>未勾選：分析看法、賽事觀點、預測比分全部公開。勾選後：只公開分析看法，其餘結論與深度分析需解鎖。</small>
+      <label class="checkline premium-checkline"><input id="fPremium" type="checkbox"> 設為 K Premium 焦點賽事</label>
+      <small>未勾選：一般賽事，分析看法、賽事觀點、預測比分公開。勾選後可先建立「焦點賽事預告」，之後再發布完整分析。</small>
+    </div>
+
+    <div id="premiumPublishRow" class="form-field full premium-publish-row" hidden>
+      <label class="checkline premium-checkline"><input id="fAnalysisPublished" type="checkbox" checked> 分析內容已發布</label>
+      <small><b>取消勾選＝焦點賽事預告模式。</b> 前台只顯示日期、時間、對戰與「賽事提醒」，不顯示分析內容、也不開放購買。之後編輯本場、勾選此項再儲存時，系統會通知已設定提醒的使用者。</small>
     </div>
 
     <div id="premiumFields" class="premium-admin-fields full" hidden>

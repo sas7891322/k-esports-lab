@@ -1,0 +1,22 @@
+K Esports Lab v2.5｜焦點賽事提醒設定
+====================================
+
+功能流程
+1. 後台新增/編輯賽事，勾選「K Premium 焦點賽事」。
+2. 取消勾選「分析內容已發布」後儲存：前台進入「焦點賽事預告」模式。
+3. 使用者可在該場賽事頁按「設定賽事提醒」，允許瀏覽器通知。
+4. 管理員之後編輯該場，填好分析內容並勾選「分析內容已發布」後儲存。
+5. 系統在同一支 /api/admin-matches 中送出 Web Push，不增加 Vercel Function 數量。
+6. 推播成功後該使用者本場提醒會自動移除（一次性提醒）。
+
+Vercel 需要額外新增兩個 Production 環境變數
+- VAPID_PUBLIC_KEY
+- VAPID_PRIVATE_KEY
+
+VAPID_PRIVATE_KEY 不可上傳 GitHub。
+
+手機支援
+- Android Chrome / Edge：可直接允許網站通知。
+- iPhone / iPad：Web Push 需先將網站「加入主畫面」，再從主畫面開啟網站並設定提醒。
+
+本版沒有新增 API 檔案，Serverless Functions 仍維持 12 支。

@@ -1,8 +1,10 @@
 (function () {
   const STORAGE_KEY = "kel_matches_v13";
   const PURCHASE_STORAGE_KEY = "kel_purchases_v1";
+  const REMINDER_STORAGE_KEY = "kel_match_reminders_v1";
 
   let cloudMatches = null;
+  let pushPublicKey = "";
 
   function getMatches() {
     if (Array.isArray(cloudMatches)) return cloudMatches;
@@ -20,6 +22,7 @@
       const data = await res.json();
       if (Array.isArray(data.matches)) {
         cloudMatches = data.matches;
+        pushPublicKey = String(data.pushPublicKey || "");
         return true;
       }
     } catch (error) {
@@ -63,6 +66,7 @@
   }
 
   function premiumPill(m) {
+    if (m.premium && m.analysisPublished === false && m.status !== "finished") return '<span class="pill gold">★ 焦點賽事預告</span>';
     return m.premium ? '<span class="pill gold">★ K PREMIUM</span>' : '<span class="pill green">一般分析</span>';
   }
 
@@ -84,9 +88,9 @@
           <div class="vs">VS</div>
           <div class="team">${teamBadge(m.teamBShort, m.teamBLogo, m.teamB)}<div class="team-name">${escapeHtml(m.teamB)}</div></div>
         </div>
-        <div class="match-note">${escapeHtml(excerpt(m.preview || "", 110))}</div>
+        <div class="match-note">${m.premium && m.analysisPublished === false && m.status !== "finished" ? "焦點賽事已先行預告，分析尚未發布，可先設定賽事提醒。" : escapeHtml(excerpt(m.preview || "", 110))}</div>
         <div class="card-actions">
-          <a class="btn ${m.premium && m.status !== "finished" ? "btn-gold" : "btn-primary"}" href="match.html?id=${encodeURIComponent(m.id)}">${m.status === "finished" ? "查看賽後紀錄" : (m.premium ? `查看 K Premium｜NT$${m.price || 39}` : "查看賽事分析")}</a>
+          <a class="btn ${m.premium && m.status !== "finished" ? "btn-gold" : "btn-primary"}" href="match.html?id=${encodeURIComponent(m.id)}">${m.status === "finished" ? "查看賽後紀錄" : (m.premium && m.analysisPublished === false ? "查看焦點賽事預告" : (m.premium ? `查看 K Premium｜NT$${m.price || 39}` : "查看賽事分析"))}</a>
         </div>
       </article>`;
   }
@@ -96,7 +100,7 @@
       <a class="list-row" href="match.html?id=${encodeURIComponent(m.id)}">
         <span class="pill">${escapeHtml(m.league)}</span>
         <div><strong>${escapeHtml(m.teamAShort)} vs ${escapeHtml(m.teamBShort)}</strong><small>${fmtDate(m.date)}・${escapeHtml(m.time)}・${escapeHtml(m.bo)}</small></div>
-        ${m.premium ? '<span class="pill gold">PREMIUM</span>' : '<span class="pill green">免費</span>'}
+        ${m.premium ? (m.analysisPublished === false && m.status !== "finished" ? '<span class="pill gold">焦點預告</span>' : '<span class="pill gold">PREMIUM</span>') : '<span class="pill green">免費</span>'}
       </a>`;
   }
 
@@ -161,6 +165,140 @@
 
   function analysisSection(title, content) {
     return `<section class="card analysis-section"><h3>${title}</h3><p>${escapeHtml(content || "尚未填寫")}</p></section>`;
+  }
+
+  function getReminderIds() {
+    try {
+      const ids = JSON.parse(localStorage.getItem(REMINDER_STORAGE_KEY) || "[]");
+      return Array.isArray(ids) ? ids : [];
+    } catch { return []; }
+  }
+
+  function setReminderLocal(matchId, enabled) {
+    const ids = new Set(getReminderIds());
+    if (enabled) ids.add(matchId); else ids.delete(matchId);
+    localStorage.setItem(REMINDER_STORAGE_KEY, JSON.stringify([...ids]));
+  }
+
+  function isReminderLocal(matchId) {
+    return getReminderIds().includes(matchId);
+  }
+
+  function urlBase64ToUint8Array(base64String) {
+    const padding = "=".repeat((4 - base64String.length % 4) % 4);
+    const base64 = (base64String + padding).replace(/-/g, "+").replace(/_/g, "/");
+    const raw = atob(base64);
+    return Uint8Array.from([...raw].map(ch => ch.charCodeAt(0)));
+  }
+
+  async function getPushSubscription() {
+    if (!("serviceWorker" in navigator) || !("PushManager" in window) || !("Notification" in window)) {
+      throw new Error("PUSH_UNSUPPORTED");
+    }
+    if (!pushPublicKey) throw new Error("PUSH_NOT_CONFIGURED");
+
+    // 通知權限要盡量緊接在使用者點擊事件後請求，避免行動瀏覽器丟失 user activation。
+    if (Notification.permission === "default") {
+      const permission = await Notification.requestPermission();
+      if (permission !== "granted") throw new Error("NOTIFICATION_DENIED");
+    } else if (Notification.permission !== "granted") {
+      throw new Error("NOTIFICATION_DENIED");
+    }
+
+    const registration = await navigator.serviceWorker.register("/sw.js", { scope: "/" });
+    await navigator.serviceWorker.ready;
+    let subscription = await registration.pushManager.getSubscription();
+    if (!subscription) {
+      subscription = await registration.pushManager.subscribe({
+        userVisibleOnly: true,
+        applicationServerKey: urlBase64ToUint8Array(pushPublicKey)
+      });
+    }
+    return subscription;
+  }
+
+  async function saveReminder(matchId) {
+    const subscription = await getPushSubscription();
+    const res = await fetch("/api/matches", {
+      method: "POST",
+      headers: { "Content-Type": "application/json", "Accept": "application/json" },
+      body: JSON.stringify({ action: "subscribeReminder", matchId, subscription: subscription.toJSON() })
+    });
+    const data = await res.json().catch(() => ({}));
+    if (!res.ok) throw new Error(data.error || `HTTP_${res.status}`);
+    setReminderLocal(matchId, true);
+  }
+
+  async function cancelReminder(matchId) {
+    if (!("serviceWorker" in navigator)) { setReminderLocal(matchId, false); return; }
+    const registration = await navigator.serviceWorker.getRegistration("/");
+    const subscription = await registration?.pushManager?.getSubscription();
+    if (subscription?.endpoint) {
+      await fetch("/api/matches", {
+        method: "POST",
+        headers: { "Content-Type": "application/json", "Accept": "application/json" },
+        body: JSON.stringify({ action: "unsubscribeReminder", matchId, endpoint: subscription.endpoint })
+      }).catch(() => {});
+    }
+    setReminderLocal(matchId, false);
+  }
+
+  function reminderMessage(error) {
+    const map = {
+      PUSH_UNSUPPORTED: "這個瀏覽器目前不支援網站推播。Android Chrome／桌面 Chrome、Edge 可直接使用；iPhone 需先把網站加入主畫面後再開啟提醒。",
+      PUSH_NOT_CONFIGURED: "網站的推播金鑰尚未完成設定，管理員設定完成後即可使用賽事提醒。",
+      NOTIFICATION_DENIED: "瀏覽器的通知權限目前未允許。請到瀏覽器網站權限把「通知」改成允許後再試。",
+      REMINDER_NOT_AVAILABLE: "這場賽事目前已不是預告狀態，無法再新增提醒。"
+    };
+    return map[error?.message] || "目前無法設定賽事提醒，請稍後再試。";
+  }
+
+  function updateReminderButton(btn) {
+    const active = isReminderLocal(btn.dataset.matchId);
+    btn.classList.toggle("reminder-active", active);
+    btn.textContent = active ? "✓ 已設定賽事提醒（點擊取消）" : "🔔 設定賽事提醒";
+  }
+
+  function bindReminderButtons() {
+    document.querySelectorAll(".reminder-btn").forEach(btn => {
+      updateReminderButton(btn);
+      btn.addEventListener("click", async () => {
+        if (btn.disabled) return;
+        const matchId = btn.dataset.matchId;
+        const active = isReminderLocal(matchId);
+        const before = btn.textContent;
+        btn.disabled = true;
+        btn.textContent = active ? "取消提醒中…" : "設定提醒中…";
+        try {
+          if (active) {
+            await cancelReminder(matchId);
+            openModal("已取消賽事提醒", "這場焦點賽事發布分析時，不會再透過本裝置通知你。");
+          } else {
+            await saveReminder(matchId);
+            openModal("賽事提醒已設定", "分析正式發布後，K Esports Lab 會透過瀏覽器推播通知你。你不需要保持這個頁面開啟。");
+          }
+          updateReminderButton(btn);
+        } catch (error) {
+          console.error(error);
+          btn.textContent = before;
+          openModal("無法設定賽事提醒", reminderMessage(error));
+        } finally {
+          btn.disabled = false;
+          updateReminderButton(btn);
+        }
+      });
+    });
+  }
+
+  function focusAnnouncement(m) {
+    return `<section class="card focus-announcement-card">
+      <div class="focus-announcement-icon">🔔</div>
+      <div class="eyebrow" style="color:var(--gold)">焦點賽事預告</div>
+      <h3>${escapeHtml(m.teamAShort)} vs ${escapeHtml(m.teamBShort)}｜K Premium 分析即將發布</h3>
+      <p>這場已先列為焦點賽事，目前尚未公開任何分析內容，也尚未開放付費解鎖。可以先設定賽事提醒，分析發布後會由瀏覽器推播通知。</p>
+      <button class="btn btn-gold reminder-btn" type="button" data-match-id="${escapeHtml(m.id)}">🔔 設定賽事提醒</button>
+      <small>首次設定時，瀏覽器會詢問通知權限。提醒只用於本場分析發布通知。</small>
+    </section>`;
   }
 
   function getPurchases() {
@@ -267,6 +405,30 @@
     const m = id ? allMatches.find(x => x.id === id) : allMatches[0];
     if (!m) { root.innerHTML = '<div class="empty">找不到賽事。</div>'; return; }
     document.title = `${m.teamAShort} vs ${m.teamBShort}｜K Esports Lab`;
+
+    const focusAnnouncementOnly = !!m.premium && m.analysisPublished === false && m.status !== "finished";
+    if (focusAnnouncementOnly) {
+      root.innerHTML = `
+        <div class="page-head">
+          <div class="match-meta"><span class="pill">${escapeHtml(m.league)}</span><span>${fmtDate(m.date)}</span><span>${escapeHtml(m.time)}</span><span>${escapeHtml(m.bo)}</span>${premiumPill(m)}</div>
+        </div>
+        <div class="card match-card premium" style="margin-bottom:18px">
+          <div class="teams">
+            <div class="team">${teamBadge(m.teamAShort, m.teamALogo, m.teamA)}<div class="team-name">${escapeHtml(m.teamA)}</div></div>
+            <div class="vs">VS</div>
+            <div class="team">${teamBadge(m.teamBShort, m.teamBLogo, m.teamB)}<div class="team-name">${escapeHtml(m.teamB)}</div></div>
+          </div>
+        </div>
+        <div class="analysis-layout">
+          <main class="analysis-main">${focusAnnouncement(m)}</main>
+          <aside class="sticky-side">
+            <div class="card score-box premium-score-locked"><span>目前狀態</span><strong>焦點預告</strong></div>
+            <div class="card card-pad"><div class="eyebrow">K Esports Lab</div><h3 style="margin:6px 0 8px">提醒說明</h3><p style="margin:0;color:var(--muted);font-size:13px;line-height:1.7">只有在分析正式發布時送出一次通知，不會因設定提醒而自動購買任何內容。</p></div>
+          </aside>
+        </div>`;
+      bindReminderButtons();
+      return;
+    }
 
     if (m.premium) capturePurchaseFromQuery(m.id);
     const unlockedContent = m.premium ? await getUnlockedContent(m.id) : null;
@@ -410,6 +572,7 @@
         ECPAY_PRODUCTION_NOT_CONFIGURED: "綠界正式環境尚未完成 MerchantID／HashKey／HashIV／PUBLIC_SITE_URL 設定。",
         ECPAY_ENV_NOT_CONFIGURED: "付款環境尚未設定；請在 Vercel 明確設定 ECPAY_ENV=stage 或 production。",
         MATCH_ALREADY_FINISHED: "本場賽事已結束，目前停止販售。",
+        ANALYSIS_NOT_PUBLISHED: "本場目前仍是焦點賽事預告，分析尚未發布，暫不開放解鎖。",
         INVALID_PRICE: "商品價格不符合目前付款方式的建單限制。"
       };
       openModal("付款暫時無法建立", messages[error.message] || "目前無法建立綠界訂單，請稍後再試或聯絡客服。");

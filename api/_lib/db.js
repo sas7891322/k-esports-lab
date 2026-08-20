@@ -152,3 +152,50 @@ export async function markStageOrderUnlocked(merchantTradeNo) {
       AND status <> 'paid'
   `;
 }
+
+export async function ensureMatchRemindersTable() {
+  const q = sql();
+  await q`
+    CREATE TABLE IF NOT EXISTS match_reminders (
+      match_id TEXT NOT NULL,
+      endpoint TEXT NOT NULL,
+      subscription JSONB NOT NULL,
+      created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+      updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+      PRIMARY KEY (match_id, endpoint)
+    )
+  `;
+  await q`CREATE INDEX IF NOT EXISTS match_reminders_match_idx ON match_reminders (match_id)`;
+}
+
+export async function upsertMatchReminder(matchId, subscription) {
+  await ensureMatchRemindersTable();
+  const q = sql();
+  const endpoint = String(subscription?.endpoint || "");
+  await q`
+    INSERT INTO match_reminders (match_id, endpoint, subscription, updated_at)
+    VALUES (${matchId}, ${endpoint}, ${JSON.stringify(subscription)}::jsonb, NOW())
+    ON CONFLICT (match_id, endpoint)
+    DO UPDATE SET subscription = EXCLUDED.subscription, updated_at = NOW()
+  `;
+}
+
+export async function removeMatchReminder(matchId, endpoint) {
+  await ensureMatchRemindersTable();
+  const q = sql();
+  await q`DELETE FROM match_reminders WHERE match_id = ${matchId} AND endpoint = ${endpoint}`;
+}
+
+export async function listMatchReminders(matchId) {
+  await ensureMatchRemindersTable();
+  const q = sql();
+  const rows = await q`SELECT endpoint, subscription FROM match_reminders WHERE match_id = ${matchId} ORDER BY created_at ASC LIMIT 500`;
+  return rows.map(row => ({ endpoint: row.endpoint, subscription: row.subscription }));
+}
+
+export async function clearMatchReminders(matchId) {
+  await ensureMatchRemindersTable();
+  const q = sql();
+  await q`DELETE FROM match_reminders WHERE match_id = ${matchId}`;
+}
+

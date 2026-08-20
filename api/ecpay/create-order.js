@@ -31,6 +31,7 @@ export default async function handler(req, res) {
     const match = await getMatchById(matchId);
     if (!match || !match.premium) return res.status(404).json({ error: "PREMIUM_MATCH_NOT_FOUND" });
     if (match.status === "finished") return res.status(409).json({ error: "MATCH_ALREADY_FINISHED" });
+    if (match.analysisPublished === false) return res.status(409).json({ error: "ANALYSIS_NOT_PUBLISHED" });
 
     const amount = Number(match.price || 39);
     if (!Number.isInteger(amount) || amount < 31) {

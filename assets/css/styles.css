@@ -931,3 +931,121 @@ h1 { margin: 8px 0 8px; font-size: clamp(30px, 5vw, 54px); line-height: 1.08; }
   .premium-compact-price strong { margin-left: 6px; }
   .premium-payment-compact .payment-method-grid { grid-template-columns: 1fr; }
 }
+
+/* v2.5 Focus reminder + admin date/time picker restoration */
+.picker-input-wrap {
+  display: grid;
+  grid-template-columns: minmax(0,1fr) auto;
+  gap: 8px;
+  align-items: center;
+}
+.picker-input {
+  color-scheme: dark;
+  min-height: 44px;
+}
+.picker-trigger {
+  min-height: 44px;
+  border: 1px solid rgba(35,199,255,.45);
+  border-radius: 12px;
+  padding: 0 13px;
+  background: rgba(35,199,255,.10);
+  color: #bfeeff;
+  font-weight: 900;
+  white-space: nowrap;
+}
+.picker-trigger:hover {
+  border-color: rgba(35,199,255,.75);
+  background: rgba(35,199,255,.16);
+}
+input[type="date"]::-webkit-calendar-picker-indicator,
+input[type="time"]::-webkit-calendar-picker-indicator {
+  opacity: 1;
+  cursor: pointer;
+  filter: invert(1) brightness(1.65);
+}
+.mobile-time-selects { display: none; }
+
+.premium-publish-row {
+  margin-top: -2px;
+  padding: 14px;
+  border: 1px solid rgba(35,199,255,.22);
+  border-radius: 14px;
+  background: rgba(35,199,255,.045);
+}
+.premium-publish-row[hidden] { display: none !important; }
+.premium-publish-row small {
+  color: var(--muted);
+  line-height: 1.65;
+}
+.premium-publish-row small b { color: #bfeaff; }
+
+.focus-announcement-card {
+  padding: 24px;
+  text-align: center;
+  border-color: rgba(244,196,78,.38);
+  background: linear-gradient(180deg, rgba(70,53,15,.28), rgba(10,25,44,.96));
+}
+.focus-announcement-icon {
+  width: 58px;
+  height: 58px;
+  margin: 0 auto 12px;
+  display: grid;
+  place-items: center;
+  border-radius: 18px;
+  border: 1px solid rgba(244,196,78,.28);
+  background: rgba(244,196,78,.09);
+  font-size: 26px;
+}
+.focus-announcement-card h3 { margin: 7px 0 9px; font-size: 20px; }
+.focus-announcement-card p {
+  max-width: 700px;
+  margin: 0 auto 16px;
+  color: #b8c9da;
+  line-height: 1.8;
+}
+.focus-announcement-card small {
+  display: block;
+  margin-top: 10px;
+  color: var(--muted);
+  line-height: 1.55;
+}
+.reminder-btn { min-width: min(100%, 320px); }
+.reminder-btn.reminder-active {
+  color: #c9ffe0;
+  border: 1px solid rgba(49,217,124,.30);
+  background: rgba(49,217,124,.12);
+}
+
+@media (max-width: 720px) {
+  .desktop-time-picker { display: none; }
+  .mobile-time-selects {
+    display: grid;
+    grid-template-columns: minmax(0,1fr) auto minmax(0,1fr);
+    align-items: end;
+    gap: 8px;
+  }
+  .mobile-time-selects label {
+    display: grid;
+    gap: 6px;
+    color: #a9bdd2;
+    font-size: 12px;
+    font-weight: 800;
+  }
+  .mobile-time-selects .select {
+    min-height: 46px;
+    font-size: 16px;
+  }
+  .mobile-time-colon {
+    padding-bottom: 12px;
+    color: #cfe0ef;
+    font-size: 18px;
+    font-weight: 900;
+  }
+  .picker-trigger {
+    min-width: 76px;
+    padding-left: 10px;
+    padding-right: 10px;
+  }
+  .focus-announcement-card { padding: 20px 16px; }
+  .reminder-btn { width: 100%; }
+}

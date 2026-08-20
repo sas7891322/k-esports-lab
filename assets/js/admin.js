@@ -7,6 +7,46 @@
   function val(id) { return $(id)?.value?.trim() || ""; }
   function checked(id) { return !!$(id)?.checked; }
 
+  function buildMobileTimeOptions() {
+    const hour = $("#fTimeHour");
+    if (hour && !hour.options.length) {
+      hour.innerHTML = Array.from({ length: 24 }, (_, i) => {
+        const v = String(i).padStart(2, "0");
+        return `<option value="${v}">${v}</option>`;
+      }).join("");
+    }
+  }
+
+  function setScheduledTime(value = "") {
+    const normalized = /^\d{2}:\d{2}$/.test(String(value || "")) ? String(value) : "";
+    if ($("#fTime")) $("#fTime").value = normalized;
+    buildMobileTimeOptions();
+    const [h = "00", rawMinute = "00"] = normalized ? normalized.split(":") : ["00", "00"];
+    if ($("#fTimeHour")) $("#fTimeHour").value = h;
+    if ($("#fTimeMinute")) $("#fTimeMinute").value = Number(rawMinute) >= 30 ? "30" : "00";
+  }
+
+  function scheduledTime() {
+    const useMobileSelectors = window.matchMedia?.("(max-width: 720px)")?.matches;
+    if (useMobileSelectors) {
+      const h = val("#fTimeHour") || "00";
+      const m = val("#fTimeMinute") || "00";
+      return `${h}:${m}`;
+    }
+    return val("#fTime");
+  }
+
+  function openNativePicker(selector) {
+    const input = $(selector);
+    if (!input) return;
+    try {
+      if (typeof input.showPicker === "function") input.showPicker();
+      else { input.focus(); input.click(); }
+    } catch {
+      input.focus();
+    }
+  }
+
   async function api(url, options = {}) {
     const res = await fetch(url, {
       ...options,
@@ -100,7 +140,9 @@
   function updatePremiumFields() {
     const premium = checked("#fPremium");
     const fields = $("#premiumFields");
+    const publishRow = $("#premiumPublishRow");
     if (fields) fields.hidden = !premium;
+    if (publishRow) publishRow.hidden = !premium;
   }
 
   function normalizeScore(value) {
@@ -154,7 +196,7 @@
       <div class="admin-item admin-match-item">
         <div class="admin-match-main">
           <strong>${window.KEL.escapeHtml(m.league)}｜${window.KEL.escapeHtml(m.teamAShort)} vs ${window.KEL.escapeHtml(m.teamBShort)}</strong>
-          <small>${window.KEL.fmtDate(m.date)} ${window.KEL.escapeHtml(m.time)}｜${m.premium ? "K Premium" : "一般分析"}｜${m.status === "finished" ? "已結束" : "未完賽"}</small>
+          <small>${window.KEL.fmtDate(m.date)} ${window.KEL.escapeHtml(m.time)}｜${m.premium ? "K Premium" : "一般分析"}${m.premium && m.analysisPublished === false ? "｜焦點預告中" : (m.premium ? "｜分析已發布" : "")}｜${m.status === "finished" ? "已結束" : "未完賽"}</small>
         </div>
         <div class="admin-item-actions">
           <button class="btn btn-secondary" data-edit="${m.id}">編輯</button>
@@ -222,7 +264,7 @@
       id,
       league: val("#fLeague") || "LCK",
       date,
-      time: val("#fTime"),
+      time: scheduledTime(),
       bo: val("#fBo") || "BO3",
       teamA: teamA?.name || "",
       teamAShort,
@@ -241,6 +283,11 @@
 
       // K Premium 才使用的深度內容。賽事觀點與預測比分沿用上方共用欄位。
       premium,
+      // 舊資料沒有 analysisPublished 時視為已發布；新焦點賽事可先取消勾選，進入預告模式。
+      analysisPublished: premium ? checked("#fAnalysisPublished") : true,
+      publishedAt: premium && checked("#fAnalysisPublished")
+        ? (old?.analysisPublished === false ? new Date().toISOString() : (old?.publishedAt || ""))
+        : "",
       price: premium ? Number(val("#fPrice") || 39) : 0,
       conditions: premium ? val("#fConditions") : "",
       risk: premium ? val("#fRisk") : "",
@@ -266,10 +313,16 @@
     }
 
     try {
-      await api("/api/admin-matches", { method: "POST", body: JSON.stringify(m) });
+      const saved = await api("/api/admin-matches", { method: "POST", body: JSON.stringify(m) });
       await loadAdminMatches();
       resetForm();
-      window.KEL.openModal("已儲存", "賽事已寫入雲端資料庫，正式網站會讀取同一份資料。");
+      const push = saved?.reminderNotification;
+      const pushText = push?.triggered
+        ? (push.configured
+            ? ` 已通知 ${push.sent || 0} 位已設定賽事提醒的使用者${push.failed ? `，${push.failed} 筆推播失敗` : ""}。`
+            : " 賽事已發布，但瀏覽器推播尚未完成 VAPID 設定，因此本次沒有送出提醒。")
+        : "";
+      window.KEL.openModal("已儲存", `賽事已寫入雲端資料庫，正式網站會讀取同一份資料。${pushText}`);
     } catch (err) {
       window.KEL.openModal("儲存失敗", err.status === 401 ? "登入已失效，請重新登入。" : "請檢查 Vercel 資料庫設定。");
     }
@@ -281,7 +334,6 @@
     const map = {
       "#fLeague":m.league,
       "#fDate":m.date,
-      "#fTime":m.time,
       "#fBo":m.bo,
       "#fPrice":m.price || 39,
       "#fPreview":m.preview,
@@ -293,8 +345,10 @@
       "#fKeyPoint":m.keyPoint || m.matchup || ""
     };
     Object.entries(map).forEach(([sel,v]) => { if ($(sel)) $(sel).value = v ?? ""; });
+    setScheduledTime(m.time || "");
     fillTeamSelects(m.teamAShort, m.teamBShort);
     $("#fPremium").checked = !!m.premium;
+    if ($("#fAnalysisPublished")) $("#fAnalysisPublished").checked = m.analysisPublished !== false;
     updatePremiumFields();
     $("#formTitle").textContent = "編輯賽事";
     window.scrollTo({top:0,behavior:"smooth"});
@@ -302,7 +356,7 @@
 
   async function duplicateMatch(id) {
     const m = adminMatches.find(x => x.id === id); if (!m) return;
-    const copy = {...m, id: `${m.id}-copy-${Date.now().toString().slice(-5)}`, status:"upcoming", result:"", resultHit:false, trendHit:null};
+    const copy = {...m, id: `${m.id}-copy-${Date.now().toString().slice(-5)}`, status:"upcoming", result:"", resultHit:false, trendHit:null, analysisPublished:m.premium ? false : true, publishedAt:""};
     await api("/api/admin-matches", { method:"POST", body:JSON.stringify(copy) });
     await loadAdminMatches();
   }
@@ -317,6 +371,8 @@
     editId = null;
     $("#matchForm")?.reset();
     if ($("#fPrice")) $("#fPrice").value = 39;
+    if ($("#fAnalysisPublished")) $("#fAnalysisPublished").checked = true;
+    setScheduledTime("");
     if ($("#formTitle")) $("#formTitle").textContent = "新增賽事";
     updatePremiumFields();
     fillTeamSelects();
@@ -332,6 +388,12 @@
     $("#fTeamASelect")?.addEventListener("change", renderTeamPreviews);
     $("#fTeamBSelect")?.addEventListener("change", renderTeamPreviews);
     $("#fPremium")?.addEventListener("change", updatePremiumFields);
+    $("#fTime")?.addEventListener("change", (e) => setScheduledTime(e.target.value));
+    $("#fTimeHour")?.addEventListener("change", () => { if ($("#fTime")) $("#fTime").value = `${val("#fTimeHour") || "00"}:${val("#fTimeMinute") || "00"}`; });
+    $("#fTimeMinute")?.addEventListener("change", () => { if ($("#fTime")) $("#fTime").value = `${val("#fTimeHour") || "00"}:${val("#fTimeMinute") || "00"}`; });
+    document.querySelectorAll("[data-picker]").forEach(btn => btn.addEventListener("click", () => openNativePicker(btn.dataset.picker)));
+    buildMobileTimeOptions();
+    setScheduledTime("");
     fillTeamSelects();
     checkSession();
   });
