@@ -7,6 +7,7 @@ import {
   countMatchReminders,
   listMatchReminderCounts
 } from "./_lib/db.js";
+import { withDerivedResultHit } from "./_lib/results.js";
 
 const PREMIUM_DEEP_FIELDS = [
   "recent",
@@ -67,10 +68,10 @@ export default async function handler(req, res) {
       const pushPublicKey = String(process.env.VAPID_PUBLIC_KEY || "").trim();
       res.setHeader("Cache-Control", "s-maxage=30, stale-while-revalidate=60");
       res.status(200).json({
-        matches: matches.map(match => publicView({
+        matches: matches.map(match => publicView(withDerivedResultHit({
           ...match,
           reminderCount: Number(reminderCounts[match.id] || 0)
-        })),
+        }))),
         pushEnabled: Boolean(pushPublicKey && process.env.VAPID_PRIVATE_KEY),
         pushPublicKey
       });

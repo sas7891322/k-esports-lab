@@ -10,6 +10,7 @@ import {
   removeMatchReminder,
   clearMatchReminders
 } from "./_lib/db.js";
+import { deriveResultHit, withDerivedResultHit } from "./_lib/results.js";
 
 function pushConfigured() {
   return Boolean(process.env.VAPID_PUBLIC_KEY && process.env.VAPID_PRIVATE_KEY);
@@ -44,7 +45,6 @@ async function notifyPublishedMatch(match) {
       await removeMatchReminder(match.id, row.endpoint);
     } catch (error) {
       base.failed += 1;
-      // 404 / 410 表示瀏覽器推播訂閱已失效，直接清掉避免持續累積。
       if (error?.statusCode === 404 || error?.statusCode === 410) {
         await removeMatchReminder(match.id, row.endpoint).catch(() => {});
       } else {
@@ -68,7 +68,7 @@ export default async function handler(req, res) {
 
   try {
     if (req.method === "GET") {
-      const matches = await listMatches();
+      const matches = (await listMatches()).map(withDerivedResultHit);
       res.status(200).json({ matches });
       return;
     }
@@ -78,6 +78,12 @@ export default async function handler(req, res) {
       if (!match?.id || !match?.league || !match?.teamA || !match?.teamB || !match?.date) {
         res.status(400).json({ error: "INVALID_MATCH" });
         return;
+      }
+
+      // 完賽資料由後端中央重新核算比分是否命中，
+      // 不再信任舊前端傳來的 resultHit，避免「TSW 3：1 GAM」被誤判。
+      if (match.status === "finished") {
+        match.resultHit = deriveResultHit(match);
       }
 
       const previous = await getMatchById(match.id);
@@ -100,7 +106,7 @@ export default async function handler(req, res) {
         });
       }
 
-      res.status(200).json({ ok: true, match, reminderNotification });
+      res.status(200).json({ ok: true, match: withDerivedResultHit(match), reminderNotification });
       return;
     }
 
