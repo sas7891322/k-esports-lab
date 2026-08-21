@@ -11,6 +11,7 @@ import {
   clearMatchReminders
 } from "./_lib/db.js";
 import { deriveResultHit, withDerivedResultHit } from "./_lib/results.js";
+import { getTrafficStats } from "./_lib/traffic.js";
 
 function pushConfigured() {
   return Boolean(process.env.VAPID_PUBLIC_KEY && process.env.VAPID_PRIVATE_KEY);
@@ -68,8 +69,14 @@ export default async function handler(req, res) {
 
   try {
     if (req.method === "GET") {
-      const matches = (await listMatches()).map(withDerivedResultHit);
-      res.status(200).json({ matches });
+      const [matches, traffic] = await Promise.all([
+        listMatches().then(rows => rows.map(withDerivedResultHit)),
+        getTrafficStats().catch(error => {
+          console.error("Traffic stats failed", error);
+          return { todayVisitors: 0, todayViews: 0, totalVisitors: 0, totalViews: 0, sevenDayVisitors: 0, sevenDayViews: 0 };
+        })
+      ]);
+      res.status(200).json({ matches, traffic });
       return;
     }
 

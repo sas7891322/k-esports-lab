@@ -563,3 +563,109 @@
     init();
   }
 })();
+
+
+/* v2.5.3 Admin traffic summary */
+(function () {
+  function num(value) {
+    return Number(value || 0).toLocaleString("zh-TW");
+  }
+
+  function injectTrafficStyles() {
+    if (document.querySelector("#kelTrafficAdminStyles")) return;
+    const style = document.createElement("style");
+    style.id = "kelTrafficAdminStyles";
+    style.textContent = `
+      .traffic-summary-card{padding:17px 18px}
+      .traffic-summary-head{display:flex;justify-content:space-between;gap:12px;align-items:end;margin-bottom:12px}
+      .traffic-summary-head h2{margin:3px 0 0;font-size:19px}
+      .traffic-summary-head small{color:var(--muted);font-size:11px}
+      .traffic-stat-grid{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:9px}
+      .traffic-stat{padding:12px;border:1px solid var(--line);border-radius:13px;background:rgba(255,255,255,.02)}
+      .traffic-stat span{display:block;color:var(--muted);font-size:11px;font-weight:800}
+      .traffic-stat strong{display:block;margin-top:4px;font-size:24px;line-height:1.15;color:#e9f4ff}
+      .traffic-seven-day{margin-top:10px;color:#8da5be;font-size:11px;line-height:1.5}
+      @media(max-width:720px){
+        .traffic-summary-card{padding:14px}
+        .traffic-summary-head{align-items:start;flex-direction:column;gap:3px}
+        .traffic-stat-grid{grid-template-columns:repeat(2,minmax(0,1fr));gap:7px}
+        .traffic-stat{padding:10px 11px}
+        .traffic-stat strong{font-size:22px}
+      }
+    `;
+    document.head.appendChild(style);
+  }
+
+  function ensureTrafficCard() {
+    let card = document.querySelector("#trafficSummaryCard");
+    if (card) return card;
+
+    const main = document.querySelector("#adminApp .admin-main");
+    if (!main) return null;
+
+    card = document.createElement("section");
+    card.id = "trafficSummaryCard";
+    card.className = "card traffic-summary-card";
+    card.innerHTML = `
+      <div class="traffic-summary-head">
+        <div><div class="eyebrow">SITE TRAFFIC</div><h2>網站流量</h2></div>
+        <small>從此功能上線後開始累積</small>
+      </div>
+      <div class="traffic-stat-grid">
+        <div class="traffic-stat"><span>今日訪客</span><strong data-traffic="todayVisitors">—</strong></div>
+        <div class="traffic-stat"><span>今日瀏覽</span><strong data-traffic="todayViews">—</strong></div>
+        <div class="traffic-stat"><span>累積訪客</span><strong data-traffic="totalVisitors">—</strong></div>
+        <div class="traffic-stat"><span>累積瀏覽</span><strong data-traffic="totalViews">—</strong></div>
+      </div>
+      <div class="traffic-seven-day" data-traffic-seven>最近 7 天：讀取中…</div>
+    `;
+    main.insertBefore(card, main.firstElementChild);
+    return card;
+  }
+
+  function renderTraffic(traffic) {
+    const card = ensureTrafficCard();
+    if (!card) return;
+    ["todayVisitors","todayViews","totalVisitors","totalViews"].forEach(key => {
+      const el = card.querySelector(`[data-traffic="${key}"]`);
+      if (el) el.textContent = num(traffic?.[key]);
+    });
+    const seven = card.querySelector("[data-traffic-seven]");
+    if (seven) {
+      seven.textContent = `最近 7 天：${num(traffic?.sevenDayVisitors)} 位訪客・${num(traffic?.sevenDayViews)} 次瀏覽`;
+    }
+  }
+
+  async function loadTraffic() {
+    try {
+      const res = await fetch("/api/admin-matches", {
+        credentials: "same-origin",
+        headers: { "Accept": "application/json" },
+        cache: "no-store"
+      });
+      if (!res.ok) return;
+      const data = await res.json();
+      renderTraffic(data.traffic || {});
+    } catch {}
+  }
+
+  function init() {
+    injectTrafficStyles();
+    let tries = 0;
+    const timer = setInterval(() => {
+      tries += 1;
+      if (ensureTrafficCard()) {
+        clearInterval(timer);
+        loadTraffic();
+      } else if (tries > 40) {
+        clearInterval(timer);
+      }
+    }, 250);
+  }
+
+  if (document.readyState === "loading") {
+    document.addEventListener("DOMContentLoaded", init, { once: true });
+  } else {
+    init();
+  }
+})();

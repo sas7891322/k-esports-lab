@@ -8,6 +8,7 @@ import {
   listMatchReminderCounts
 } from "./_lib/db.js";
 import { withDerivedResultHit } from "./_lib/results.js";
+import { recordTrafficVisit } from "./_lib/traffic.js";
 
 const PREMIUM_DEEP_FIELDS = [
   "recent",
@@ -61,12 +62,13 @@ export default async function handler(req, res) {
 
   try {
     if (req.method === "GET") {
+      await recordTrafficVisit(req, res).catch(error => console.error("Traffic tracking failed", error));
       const [matches, reminderCounts] = await Promise.all([
         listMatches(),
         listMatchReminderCounts()
       ]);
       const pushPublicKey = String(process.env.VAPID_PUBLIC_KEY || "").trim();
-      res.setHeader("Cache-Control", "s-maxage=30, stale-while-revalidate=60");
+      res.setHeader("Cache-Control", "no-store, max-age=0");
       res.status(200).json({
         matches: matches.map(match => publicView(withDerivedResultHit({
           ...match,
