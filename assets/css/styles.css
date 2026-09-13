@@ -575,6 +575,9 @@ h1 { margin: 8px 0 8px; font-size: clamp(30px, 5vw, 54px); line-height: 1.08; }
 
 /* v2.0.7 Result management */
 .admin-match-item{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:12px 16px;align-items:center}
+.admin-purchase-stats{display:flex;flex-wrap:wrap;gap:8px;margin-top:8px}
+.admin-purchase-stats span{padding:5px 8px;border:1px solid rgba(244,196,78,.3);border-radius:999px;background:rgba(244,196,78,.08);color:#d9c992;font-size:12px}
+.admin-purchase-stats b{color:var(--gold-2);font-size:13px}
 .admin-result-manager{grid-column:1/-1;padding-top:12px;border-top:1px solid rgba(255,255,255,.07)}
 .admin-result-entry{display:grid;grid-template-columns:auto 64px 18px 64px auto 1fr;gap:8px;align-items:center}
 .result-score-input{width:64px;text-align:center;padding-left:8px;padding-right:8px}

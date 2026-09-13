@@ -153,6 +153,27 @@ export async function markStageOrderUnlocked(merchantTradeNo) {
   `;
 }
 
+export async function listPaidOrderStats() {
+  await ensureOrdersTable();
+  const q = sql();
+  // 僅統計非 STAGE 的成功付款訂單。待付款、失敗與 STAGE 測試解鎖都不列入銷售數字；
+  // 保留 unknown 是為了兼容舊版已收款、尚未寫入 environment 的訂單。
+  const rows = await q`
+    SELECT match_id,
+           COUNT(*)::int AS purchase_count,
+           COALESCE(SUM(amount), 0)::int AS sales_total
+    FROM orders
+    WHERE status = 'paid'
+      AND environment <> 'stage'
+    GROUP BY match_id
+  `;
+
+  return Object.fromEntries(rows.map(row => [String(row.match_id), {
+    purchaseCount: Number(row.purchase_count || 0),
+    salesTotal: Number(row.sales_total || 0)
+  }]));
+}
+
 export async function ensureMatchRemindersTable() {
   const q = sql();
   await q`

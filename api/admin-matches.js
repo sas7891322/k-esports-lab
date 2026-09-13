@@ -6,6 +6,7 @@ import {
   getMatchById,
   upsertMatch,
   deleteMatch,
+  listPaidOrderStats,
   listMatchReminders,
   removeMatchReminder,
   clearMatchReminders
@@ -69,14 +70,23 @@ export default async function handler(req, res) {
 
   try {
     if (req.method === "GET") {
-      const [matches, traffic] = await Promise.all([
+      const [matches, traffic, purchaseStats] = await Promise.all([
         listMatches().then(rows => rows.map(withDerivedResultHit)),
         getTrafficStats().catch(error => {
           console.error("Traffic stats failed", error);
           return { todayVisitors: 0, todayViews: 0, totalVisitors: 0, totalViews: 0, sevenDayVisitors: 0, sevenDayViews: 0 };
+        }),
+        listPaidOrderStats().catch(error => {
+          console.error("Purchase stats failed", error);
+          return {};
         })
       ]);
-      res.status(200).json({ matches, traffic });
+      const matchesWithPurchaseStats = matches.map(match => ({
+        ...match,
+        purchaseCount: Number(purchaseStats[match.id]?.purchaseCount || 0),
+        salesTotal: Number(purchaseStats[match.id]?.salesTotal || 0)
+      }));
+      res.status(200).json({ matches: matchesWithPurchaseStats, traffic });
       return;
     }
 
@@ -86,6 +96,10 @@ export default async function handler(req, res) {
         res.status(400).json({ error: "INVALID_MATCH" });
         return;
       }
+
+      // 後台列表的即時銷售統計只供顯示，不能寫進賽事內容。
+      delete match.purchaseCount;
+      delete match.salesTotal;
 
       // 完賽資料由後端中央重新核算比分是否命中，
       // 不再信任舊前端傳來的 resultHit，避免「TSW 3：1 GAM」被誤判。

@@ -197,6 +197,7 @@
         <div class="admin-match-main">
           <strong>${window.KEL.escapeHtml(m.league)}｜${window.KEL.escapeHtml(m.teamAShort)} vs ${window.KEL.escapeHtml(m.teamBShort)}</strong>
           <small>${window.KEL.fmtDate(m.date)} ${window.KEL.escapeHtml(m.time)}｜${m.premium ? "K Premium" : "一般分析"}${m.premium && m.analysisPublished === false ? "｜焦點預告中" : (m.premium ? "｜分析已發布" : "")}｜${m.status === "finished" ? "已結束" : "未完賽"}</small>
+          ${m.premium ? `<div class="admin-purchase-stats" aria-label="本場焦點賽事銷售統計"><span>已購買 <b>${Number(m.purchaseCount || 0)}</b> 人</span><span>成功銷售 <b>NT$${Number(m.salesTotal || 0).toLocaleString("zh-TW")}</b></span></div>` : ""}
         </div>
         <div class="admin-item-actions">
           <button class="btn btn-secondary" data-edit="${m.id}">編輯</button>
