@@ -1,5 +1,5 @@
 (function () {
-  const LEAGUES = ["ALL","LCK","LPL","LCP","LEC","LCS","CBLOL"];
+  const LEAGUES = ["ALL","LCK","LPL","LCP","LEC","LCS","CBLOL",...(window.KEL_TOURNAMENTS || [])];
   let currentLeague = "ALL";
   let currentWindow = "all";
   let resultLimit = 30;
@@ -138,7 +138,7 @@
   }
   function renderLeagueFilters(target,onChange) {
     const root=$(target); if(!root) return;
-    root.innerHTML=LEAGUES.map(l=>`<button type="button" class="archive-filter ${l===currentLeague?"active":""}" data-league="${l}">${l==="ALL"?"全部賽區":l}</button>`).join("");
+    root.innerHTML=LEAGUES.map(l=>`<button type="button" class="archive-filter ${l===currentLeague?"active":""}" data-league="${esc(l)}">${l==="ALL"?"全部賽事":esc(l)}</button>`).join("");
     root.querySelectorAll("[data-league]").forEach(btn=>btn.addEventListener("click",()=>{ currentLeague=btn.dataset.league; resultLimit=30; renderLeagueFilters(target,onChange); onChange(); }));
   }
   function bindWindowFilters() {

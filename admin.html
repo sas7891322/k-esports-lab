@@ -4,7 +4,7 @@
 <section class="card form-card"><h2 id="formTitle">新增賽事</h2>
 <form id="matchForm">
   <div class="form-grid">
-    <div class="form-field"><label>賽區</label><select id="fLeague" class="select"><option>LCK</option><option>LPL</option><option>LCP</option><option>LEC</option><option>LCS</option><option>CBLOL</option></select></div>
+    <div class="form-field"><label>賽事／賽區</label><select id="fLeague" class="select"><optgroup label="六大賽區"><option>LCK</option><option>LPL</option><option>LCP</option><option>LEC</option><option>LCS</option><option>CBLOL</option></optgroup><optgroup label="國際／盃賽"><option>2026 德瑪西亞杯</option><option>2026 世界賽</option></optgroup></select><small>國際／盃賽只會載入該屆實際參賽隊伍，不會混入其他賽區隊伍。</small></div>
     <div class="form-field"><label>日期</label><div class="picker-input-wrap"><input id="fDate" type="date" class="input picker-input" required><button class="picker-trigger" type="button" data-picker="#fDate" aria-label="選擇日期">選日期</button></div></div>
     <div class="form-field admin-time-field"><label>預定時間</label><div class="picker-input-wrap desktop-time-picker"><input id="fTime" type="time" step="1800" class="input picker-input"><button class="picker-trigger" type="button" data-picker="#fTime" aria-label="選擇時間">選時間</button></div><div class="mobile-time-selects" aria-label="手機版預定時間"><label><span>時</span><select id="fTimeHour" class="select"></select></label><span class="mobile-time-colon">：</span><label><span>分</span><select id="fTimeMinute" class="select"><option value="00">00</option><option value="30">30</option></select></label></div></div>
     <div class="form-field"><label>賽制</label><select id="fBo" class="select"><option>BO3</option><option>BO5</option><option>BO1</option></select></div>
@@ -48,4 +48,5 @@
 </div></div></main>
 <div id="globalModal" class="modal"><div class="modal-card"><h3 data-modal-title></h3><p data-modal-text></p><div class="modal-actions"><button class="btn btn-secondary" data-modal-close>關閉</button></div></div></div>
 <script src="assets/js/teams.js"></script>
+<script src="assets/js/tournaments.js"></script>
 <script src="assets/js/data.js"></script><script src="assets/js/app.js"></script><script src="assets/js/admin.js"></script><script src="assets/js/admin-auto-result.js"></script></body></html>
