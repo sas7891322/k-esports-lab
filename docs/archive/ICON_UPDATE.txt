@@ -1,0 +1,12 @@
+K Esports Lab｜手機桌面圖示更新
+================================
+
+- 新桌面圖示：assets/img/k-app-180.png / k-app-192.png / k-app-512.png
+- manifest.webmanifest 已改用新檔名，避免手機沿用舊 K 圖示快取。
+- iPhone/iPad apple-touch-icon 已改用 k-app-180.png。
+- Web Push 通知 icon 已同步使用新版圖示。
+
+部署後：
+1. 先刪除手機桌面上舊的 K Esports Lab 捷徑/App。
+2. 重新開啟正式網站。
+3. 再次「加入主畫面」。

@@ -1,0 +1,8 @@
+K Esports Lab 清理與修改紀錄（2026-10-10）
+
+1. assets/js/tournaments.js：Worlds 2026 名單加入 CBLOL / FUR，從 18 支補至 19 支。
+2. 保留全部網站執行檔、圖片、API、資料庫與設定，避免影響部署、付款或賽事顯示。
+3. 僅將 4 個歷史性說明檔移到 docs/archive/：V2.4_CHANGELOG.txt、V2.5_CHANGELOG.txt、UPDATE_README.txt、ICON_UPDATE.txt。沒有刪除任何原始檔案內容。
+4. README.md、README.txt 含不同版本資訊，均保留。所有金流/部署/提醒設定文件保留原位。
+5. 舊賽區隊徽與隊伍圖片可能仍被一般賽事使用，不建議因非世界賽隊伍而刪除。
+6. 此次為靜態程式碼修正，尚未於線上 Vercel 環境驗證部署與付款流程。
